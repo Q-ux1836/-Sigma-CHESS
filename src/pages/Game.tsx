@@ -6,8 +6,9 @@ import ChessBoard from '@/components/ChessBoard';
 import { Button } from '@/components/ui/button';
 import { 
   initializeGame, GameState, GameMode, 
-  PieceColor, makeAIMove 
+  PieceColor, makeAIMove, ChessPiece as ChessPieceType
 } from '@/lib/chessEngine';
+import ChessPiece from '@/components/ChessPiece';
 import { ArrowLeftRight, RefreshCw, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -70,6 +71,13 @@ const Game = () => {
       </div>
     );
   }
+
+  // Create a smaller piece for the captured pieces display
+  const CapturedPiece = ({ piece }: { piece: ChessPieceType }) => (
+    <div className="w-8 h-8">
+      <ChessPiece piece={piece} />
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/10">
@@ -150,9 +158,7 @@ const Game = () => {
                     {gameState.capturedPieces
                       .filter(piece => piece.color === PieceColor.WHITE)
                       .map((piece, index) => (
-                        <div key={index} className="w-6 h-6">
-                          {/* Render captured white pieces */}
-                        </div>
+                        <CapturedPiece key={index} piece={piece} />
                       ))}
                     {gameState.capturedPieces.filter(piece => piece.color === PieceColor.WHITE).length === 0 && (
                       <p className="text-sm text-muted-foreground">None</p>
@@ -166,9 +172,7 @@ const Game = () => {
                     {gameState.capturedPieces
                       .filter(piece => piece.color === PieceColor.BLACK)
                       .map((piece, index) => (
-                        <div key={index} className="w-6 h-6">
-                          {/* Render captured black pieces */}
-                        </div>
+                        <CapturedPiece key={index} piece={piece} />
                       ))}
                     {gameState.capturedPieces.filter(piece => piece.color === PieceColor.BLACK).length === 0 && (
                       <p className="text-sm text-muted-foreground">None</p>

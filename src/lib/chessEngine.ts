@@ -40,6 +40,7 @@ export interface Position {
 export interface Move {
   from: Position;
   to: Position;
+  promotion?: PieceType;
 }
 
 // Game State Interface
@@ -53,6 +54,10 @@ export interface GameState {
   isCheckmate: boolean;
   capturedPieces: ChessPiece[];
   moveHistory: Move[];
+  promotionPending?: {
+    from: Position;
+    to: Position;
+  };
 }
 
 // Initialize the chess board
@@ -284,6 +289,59 @@ export function getPossibleMoves(piece: ChessPiece, board: (ChessPiece | null)[]
   return moves;
 }
 
+// Check if a pawn can be promoted
+export function isPawnPromotion(from: Position, to: Position, board: (ChessPiece | null)[][]): boolean {
+  const piece = board[from.row][from.col];
+  if (!piece || piece.type !== PieceType.PAWN) return false;
+  
+  // Pawns are promoted when they reach the opposite end of the board
+  return (piece.color === PieceColor.WHITE && to.row === 0) || 
+         (piece.color === PieceColor.BLACK && to.row === 7);
+}
+
+// Promote a pawn to a new piece type
+export function promotePawn(gameState: GameState, promotionType: PieceType): GameState {
+  if (!gameState.promotionPending) return gameState;
+  
+  const { from, to } = gameState.promotionPending;
+  const newBoard = gameState.board.map(row => [...row]);
+  const piece = newBoard[from.row][from.col];
+  
+  if (!piece) return gameState;
+  
+  // Create the promoted piece
+  const promotedPiece: ChessPiece = {
+    type: promotionType,
+    color: piece.color,
+    position: { ...to },
+    hasMoved: true
+  };
+  
+  // Place the promoted piece
+  newBoard[to.row][to.col] = promotedPiece;
+  newBoard[from.row][from.col] = null;
+  
+  // Add move to history
+  const newMoveHistory = [...gameState.moveHistory, { 
+    from, 
+    to,
+    promotion: promotionType
+  }];
+  
+  // Toggle current turn
+  const newTurn = gameState.currentTurn === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+  
+  return {
+    ...gameState,
+    board: newBoard,
+    currentTurn: newTurn,
+    selectedPiece: null,
+    possibleMoves: [],
+    promotionPending: undefined,
+    moveHistory: newMoveHistory
+  };
+}
+
 // Move a piece on the board
 export function movePiece(from: Position, to: Position, gameState: GameState): GameState {
   const newBoard = gameState.board.map(row => [...row]);
@@ -296,6 +354,14 @@ export function movePiece(from: Position, to: Position, gameState: GameState): G
   const isValidMove = possibleMoves.some(move => move.row === to.row && move.col === to.col);
   
   if (!isValidMove) return gameState;
+  
+  // Check for pawn promotion
+  if (piece.type === PieceType.PAWN && isPawnPromotion(from, to, newBoard)) {
+    return {
+      ...gameState,
+      promotionPending: { from, to }
+    };
+  }
   
   // Check if the move is a capture
   const capturedPiece = newBoard[to.row][to.col];
