@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { PieceType, PieceColor, ChessPiece } from '@/lib/chessEngine';
-import ChessPiece from './ChessPiece';
+import { PieceType, PieceColor, ChessPiece as ChessPieceType } from '@/lib/chessEngine';
+import ChessPieceComponent from './ChessPiece';
 import { cn } from '@/lib/utils';
 
 interface PawnPromotionDialogProps {
@@ -27,7 +27,7 @@ const PawnPromotionDialog: React.FC<PawnPromotionDialogProps> = ({
         
         <div className="grid grid-cols-4 gap-4 mt-4">
           {pieceTypes.map((type) => {
-            const piece: ChessPiece = {
+            const piece: ChessPieceType = {
               type,
               color: pieceColor,
               position: { row: 0, col: 0 } // Position is not relevant for display
@@ -43,7 +43,7 @@ const PawnPromotionDialog: React.FC<PawnPromotionDialogProps> = ({
                 )}
                 onClick={() => onSelect(type)}
               >
-                <ChessPiece piece={piece} />
+                <ChessPieceComponent piece={piece} />
               </button>
             );
           })}
