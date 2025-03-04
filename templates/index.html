@@ -1,0 +1,61 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Chess Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Python Chess</h1>
+    </header>
+    
+    <main>
+        <div class="game-container">
+            <div class="captured-pieces black-captured">
+                <h3>Captured by White</h3>
+                <div id="black-captured-pieces" class="pieces-container"></div>
+            </div>
+            
+            <div class="chess-board" id="chess-board">
+                <!-- Chess board will be dynamically generated -->
+            </div>
+            
+            <div class="captured-pieces white-captured">
+                <h3>Captured by Black</h3>
+                <div id="white-captured-pieces" class="pieces-container"></div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="reset-game">New Game</button>
+            <select id="game-mode">
+                <option value="human_vs_human">Human vs Human</option>
+                <option value="human_vs_ai">Human vs AI</option>
+            </select>
+        </div>
+        
+        <div class="promotion-dialog" id="promotion-dialog">
+            <h3>Choose Promotion</h3>
+            <div class="promotion-options">
+                <div class="promotion-piece" data-piece-type="queen">
+                    <img src="" alt="Queen" id="promotion-queen">
+                </div>
+                <div class="promotion-piece" data-piece-type="rook">
+                    <img src="" alt="Rook" id="promotion-rook">
+                </div>
+                <div class="promotion-piece" data-piece-type="bishop">
+                    <img src="" alt="Bishop" id="promotion-bishop">
+                </div>
+                <div class="promotion-piece" data-piece-type="knight">
+                    <img src="" alt="Knight" id="promotion-knight">
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
