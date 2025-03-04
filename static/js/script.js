@@ -1,301 +1,378 @@
 
-// DOM Elements
-const chessBoard = document.getElementById('chess-board');
-const whiteCapturedContainer = document.getElementById('white-captured-pieces');
-const blackCapturedContainer = document.getElementById('black-captured-pieces');
-const resetButton = document.getElementById('reset-game');
-const gameModeSelect = document.getElementById('game-mode');
-const promotionDialog = document.getElementById('promotion-dialog');
-
-// Game state
-let gameState = null;
-
-// Initialize the game
-async function initGame() {
-    try {
-        const response = await fetch('/api/game-state');
-        gameState = await response.json();
-        renderBoard();
-        renderCapturedPieces();
-    } catch (error) {
-        console.error('Error initializing game:', error);
-    }
-}
-
-// Render the chess board
-function renderBoard() {
-    chessBoard.innerHTML = '';
+document.addEventListener('DOMContentLoaded', function() {
+    // Chess board and pieces
+    const chessBoard = document.getElementById('chess-board');
+    const blackCapturedContainer = document.getElementById('black-captured-pieces');
+    const whiteCapturedContainer = document.getElementById('white-captured-pieces');
+    const resetButton = document.getElementById('reset-game');
+    const gameModeSelect = document.getElementById('game-mode');
+    const promotionDialog = document.getElementById('promotion-dialog');
+    const boardStyleSelect = document.getElementById('board-style');
     
-    for (let row = 0; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
-            const square = document.createElement('div');
-            square.className = `chess-square ${(row + col) % 2 === 0 ? 'square-light' : 'square-dark'}`;
-            
-            // Add selected class if applicable
-            if (gameState.selectedPiece && gameState.selectedPiece.row === row && gameState.selectedPiece.col === col) {
-                square.classList.add('square-selected');
-            }
-            
-            // Add movable class if applicable
-            const isPossibleMove = gameState.possibleMoves.some(move => move.row === row && move.col === col);
-            if (isPossibleMove) {
-                square.classList.add('square-movable');
-            }
-            
-            // Add piece if there is one
-            const piece = gameState.board[row][col];
-            if (piece) {
-                const pieceElement = document.createElement('div');
-                pieceElement.className = 'chess-piece';
-                
-                const img = document.createElement('img');
-                img.src = `/lovable-uploads/${getPieceImage(piece.type, piece.color)}`;
-                img.alt = `${piece.color} ${piece.type}`;
-                
-                pieceElement.appendChild(img);
-                square.appendChild(pieceElement);
-            }
-            
-            // Add click event
-            square.dataset.row = row;
-            square.dataset.col = col;
-            square.addEventListener('click', handleSquareClick);
-            
-            chessBoard.appendChild(square);
-        }
-    }
-}
-
-// Helper function to get the correct image for a piece
-function getPieceImage(type, color) {
-    const imageMap = {
-        [PieceType.PAWN]: {
-            [PieceColor.WHITE]: '3418cc24-b2db-406f-849a-38af9c17790f.png',
-            [PieceColor.BLACK]: '1c3d4630-5dfc-48e7-9de1-f4e424e65a19.png'
+    // Game state
+    let gameState = null;
+    let selectedSquare = null;
+    let possibleMoves = [];
+    
+    // Piece images mapping
+    const pieceImages = {
+        'white': {
+            'pawn': '/lovable-uploads/3418cc24-b2db-406f-849a-38af9c17790f.png',
+            'rook': '/lovable-uploads/b16be7f8-775a-4791-9bc1-52afcf217e18.png',
+            'knight': '/lovable-uploads/393e47b6-0886-49a4-9c05-cf4b876f0ce5.png',
+            'bishop': '/lovable-uploads/364cc47a-6d27-459b-92dc-f535fea3a950.png',
+            'queen': '/lovable-uploads/79184c56-bca9-4c3f-8a2b-77c53134c8e6.png',
+            'king': '/lovable-uploads/9a763d59-7f80-45ab-9dcd-c9eff361b961.png'
         },
-        [PieceType.ROOK]: {
-            [PieceColor.WHITE]: 'b16be7f8-775a-4791-9bc1-52afcf217e18.png',
-            [PieceColor.BLACK]: 'dc87ed84-84de-4d26-9042-9170ab8437c2.png'
-        },
-        [PieceType.KNIGHT]: {
-            [PieceColor.WHITE]: '393e47b6-0886-49a4-9c05-cf4b876f0ce5.png',
-            [PieceColor.BLACK]: '0f8ca98b-a8dc-4f72-a2e5-5e040c3f3cbf.png'
-        },
-        [PieceType.BISHOP]: {
-            [PieceColor.WHITE]: '364cc47a-6d27-459b-92dc-f535fea3a950.png',
-            [PieceColor.BLACK]: '3418cc24-b2db-406f-849a-38af9c17790f.png'
-        },
-        [PieceType.QUEEN]: {
-            [PieceColor.WHITE]: '79184c56-bca9-4c3f-8a2b-77c53134c8e6.png',
-            [PieceColor.BLACK]: 'fbf27461-95a7-4b74-8e6c-3611a187691f.png'
-        },
-        [PieceType.KING]: {
-            [PieceColor.WHITE]: '9a763d59-7f80-45ab-9dcd-c9eff361b961.png',
-            [PieceColor.BLACK]: 'a5cbe14a-8516-4fd8-8bc1-ce46f2b351c4.png'
+        'black': {
+            'pawn': '/lovable-uploads/1c3d4630-5dfc-48e7-9de1-f4e424e65a19.png',
+            'rook': '/lovable-uploads/dc87ed84-84de-4d26-9042-9170ab8437c2.png',
+            'knight': '/lovable-uploads/0f8ca98b-a8dc-4f72-a2e5-5e040c3f3cbf.png',
+            'bishop': '/lovable-uploads/3418cc24-b2db-406f-849a-38af9c17790f.png',
+            'queen': '/lovable-uploads/fbf27461-95a7-4b74-8e6c-3611a187691f.png',
+            'king': '/lovable-uploads/a5cbe14a-8516-4fd8-8bc1-ce46f2b351c4.png'
         }
     };
     
-    return imageMap[type][color];
-}
-
-// Handle clicking on a square
-async function handleSquareClick(event) {
-    if (gameState.promotionPending) return; // Don't allow moves during promotion
+    // Board styles
+    const boardStyles = {
+        'classic': {
+            light: 'square-light',
+            dark: 'square-dark'
+        },
+        'blue': {
+            light: 'square-light-blue',
+            dark: 'square-dark-blue'
+        },
+        'green': {
+            light: 'square-light-green',
+            dark: 'square-dark-green'
+        }
+    };
     
-    const row = parseInt(event.currentTarget.dataset.row);
-    const col = parseInt(event.currentTarget.dataset.col);
-    
-    // If a piece is already selected
-    if (gameState.selectedPiece) {
-        const fromRow = gameState.selectedPiece.row;
-        const fromCol = gameState.selectedPiece.col;
+    // Initialize chess board
+    function initializeBoard() {
+        // Clear the board
+        chessBoard.innerHTML = '';
         
-        // Check if clicking on a possible move
-        const isMovePossible = gameState.possibleMoves.some(
-            move => move.row === row && move.col === col
-        );
+        // Get current board style
+        const currentStyle = boardStyleSelect.value;
         
-        if (isMovePossible) {
-            // Make the move
-            try {
-                const response = await fetch('/api/move-piece', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        fromRow,
-                        fromCol,
-                        toRow: row,
-                        toCol: col
-                    })
-                });
+        // Create squares
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const square = document.createElement('div');
+                square.classList.add('chess-square');
                 
-                const result = await response.json();
-                if (result.success) {
-                    gameState = result.gameState;
-                    
-                    // Check if promotion is pending
-                    if (gameState.promotionPending) {
-                        showPromotionDialog();
-                    }
-                    
-                    renderBoard();
-                    renderCapturedPieces();
+                // Apply square color
+                if ((row + col) % 2 === 0) {
+                    square.classList.add(boardStyles[currentStyle].light);
+                } else {
+                    square.classList.add(boardStyles[currentStyle].dark);
                 }
-            } catch (error) {
-                console.error('Error making move:', error);
+                
+                // Set data attributes
+                square.dataset.row = row;
+                square.dataset.col = col;
+                
+                // Add click event
+                square.addEventListener('click', handleSquareClick);
+                
+                // Add to board
+                chessBoard.appendChild(square);
             }
+        }
+        
+        // Initialize promotion dialog images
+        document.getElementById('promotion-queen').src = pieceImages['white']['queen'];
+        document.getElementById('promotion-rook').src = pieceImages['white']['rook'];
+        document.getElementById('promotion-bishop').src = pieceImages['white']['bishop'];
+        document.getElementById('promotion-knight').src = pieceImages['white']['knight'];
+        
+        // Fetch initial game state
+        fetchGameState();
+    }
+    
+    // Fetch game state from server
+    async function fetchGameState() {
+        try {
+            const response = await fetch('/api/game-state');
+            gameState = await response.json();
+            updateBoard();
+        } catch (error) {
+            console.error('Error fetching game state:', error);
+        }
+    }
+    
+    // Update the board based on game state
+    function updateBoard() {
+        // Update pieces
+        const squares = chessBoard.querySelectorAll('.chess-square');
+        squares.forEach(square => {
+            // Remove existing pieces
+            while (square.firstChild) {
+                square.removeChild(square.firstChild);
+            }
+            
+            // Get square position
+            const row = parseInt(square.dataset.row);
+            const col = parseInt(square.dataset.col);
+            
+            // Get piece at this position
+            const piece = gameState.board[row][col];
+            
+            if (piece) {
+                // Create piece element
+                const pieceElement = document.createElement('div');
+                pieceElement.classList.add('chess-piece');
+                
+                // Create image element
+                const imgElement = document.createElement('img');
+                imgElement.src = pieceImages[piece.color][piece.type];
+                imgElement.alt = `${piece.color} ${piece.type}`;
+                
+                // Add image to piece
+                pieceElement.appendChild(imgElement);
+                
+                // Add piece to square
+                square.appendChild(pieceElement);
+            }
+            
+            // Update square highlighting
+            square.classList.remove('square-selected', 'square-movable');
+            
+            // Highlight selected piece
+            if (gameState.selectedPiece && 
+                gameState.selectedPiece.row === row && 
+                gameState.selectedPiece.col === col) {
+                square.classList.add('square-selected');
+            }
+            
+            // Highlight possible moves
+            if (gameState.possibleMoves && gameState.possibleMoves.some(move => 
+                move.row === row && move.col === col)) {
+                square.classList.add('square-movable');
+            }
+        });
+        
+        // Update captured pieces
+        updateCapturedPieces();
+        
+        // Show promotion dialog if needed
+        if (gameState.promotionPending) {
+            showPromotionDialog(gameState.currentTurn);
         } else {
-            // Select a different piece or deselect
+            hidePromotionDialog();
+        }
+    }
+    
+    // Update captured pieces display
+    function updateCapturedPieces() {
+        // Clear containers
+        blackCapturedContainer.innerHTML = '';
+        whiteCapturedContainer.innerHTML = '';
+        
+        // Process captured pieces
+        if (gameState.capturedPieces) {
+            // Black pieces (captured by white)
+            if (Array.isArray(gameState.capturedPieces.black)) {
+                gameState.capturedPieces.black.forEach(piece => {
+                    const capturedPiece = document.createElement('div');
+                    capturedPiece.classList.add('captured-piece');
+                    
+                    const img = document.createElement('img');
+                    img.src = pieceImages[piece.color][piece.type];
+                    img.alt = `${piece.color} ${piece.type}`;
+                    
+                    capturedPiece.appendChild(img);
+                    blackCapturedContainer.appendChild(capturedPiece);
+                });
+            }
+            
+            // White pieces (captured by black)
+            if (Array.isArray(gameState.capturedPieces.white)) {
+                gameState.capturedPieces.white.forEach(piece => {
+                    const capturedPiece = document.createElement('div');
+                    capturedPiece.classList.add('captured-piece');
+                    
+                    const img = document.createElement('img');
+                    img.src = pieceImages[piece.color][piece.type];
+                    img.alt = `${piece.color} ${piece.type}`;
+                    
+                    capturedPiece.appendChild(img);
+                    whiteCapturedContainer.appendChild(capturedPiece);
+                });
+            }
+        }
+    }
+    
+    // Handle square click
+    async function handleSquareClick(event) {
+        const square = event.currentTarget;
+        const row = parseInt(square.dataset.row);
+        const col = parseInt(square.dataset.col);
+        
+        // If promotion is pending, don't allow other moves
+        if (gameState.promotionPending) {
+            return;
+        }
+        
+        // Get piece at clicked position
+        const piece = gameState.board[row][col];
+        
+        // If a piece is already selected
+        if (gameState.selectedPiece) {
+            const selectedRow = gameState.selectedPiece.row;
+            const selectedCol = gameState.selectedPiece.col;
+            
+            // Check if the clicked square is a valid move
+            const isValidMove = gameState.possibleMoves.some(
+                move => move.row === row && move.col === col
+            );
+            
+            if (isValidMove) {
+                // Make the move
+                try {
+                    const response = await fetch('/api/move-piece', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            fromRow: selectedRow,
+                            fromCol: selectedCol,
+                            toRow: row,
+                            toCol: col
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        gameState = result.gameState;
+                        updateBoard();
+                    }
+                } catch (error) {
+                    console.error('Error making move:', error);
+                }
+            } else if (piece && piece.color === gameState.currentTurn) {
+                // Select a new piece
+                try {
+                    const response = await fetch('/api/select-piece', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            row: row,
+                            col: col
+                        })
+                    });
+                    
+                    gameState = await response.json();
+                    updateBoard();
+                } catch (error) {
+                    console.error('Error selecting piece:', error);
+                }
+            } else {
+                // Deselect current piece
+                gameState.selectedPiece = null;
+                gameState.possibleMoves = [];
+                updateBoard();
+            }
+        } else if (piece && piece.color === gameState.currentTurn) {
+            // Select a piece
             try {
                 const response = await fetch('/api/select-piece', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ row, col })
+                    body: JSON.stringify({
+                        row: row,
+                        col: col
+                    })
                 });
                 
                 gameState = await response.json();
-                renderBoard();
+                updateBoard();
             } catch (error) {
                 console.error('Error selecting piece:', error);
             }
         }
-    } else {
-        // Select a piece
+    }
+    
+    // Show promotion dialog
+    function showPromotionDialog(color) {
+        // Update images based on color
+        document.getElementById('promotion-queen').src = pieceImages[color]['queen'];
+        document.getElementById('promotion-rook').src = pieceImages[color]['rook'];
+        document.getElementById('promotion-bishop').src = pieceImages[color]['bishop'];
+        document.getElementById('promotion-knight').src = pieceImages[color]['knight'];
+        
+        // Show dialog
+        promotionDialog.classList.add('active');
+        document.querySelector('.overlay').classList.add('active');
+        
+        // Add click events to promotion options
+        const promotionPieces = document.querySelectorAll('.promotion-piece');
+        promotionPieces.forEach(piece => {
+            piece.onclick = async function() {
+                const pieceType = this.dataset.pieceType;
+                try {
+                    const response = await fetch('/api/promote-pawn', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            pieceType: pieceType
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        gameState = result.gameState;
+                        updateBoard();
+                    }
+                } catch (error) {
+                    console.error('Error promoting pawn:', error);
+                }
+                
+                hidePromotionDialog();
+            };
+        });
+    }
+    
+    // Hide promotion dialog
+    function hidePromotionDialog() {
+        promotionDialog.classList.remove('active');
+        document.querySelector('.overlay').classList.remove('active');
+    }
+    
+    // Reset game
+    resetButton.addEventListener('click', async function() {
         try {
-            const response = await fetch('/api/select-piece', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ row, col })
+            const response = await fetch('/api/reset-game', {
+                method: 'POST'
             });
             
             gameState = await response.json();
-            renderBoard();
+            updateBoard();
         } catch (error) {
-            console.error('Error selecting piece:', error);
+            console.error('Error resetting game:', error);
         }
-    }
-}
-
-// Render captured pieces
-function renderCapturedPieces() {
-    whiteCapturedContainer.innerHTML = '';
-    blackCapturedContainer.innerHTML = '';
-    
-    gameState.capturedPieces[PieceColor.BLACK].forEach(piece => {
-        const pieceElement = document.createElement('div');
-        pieceElement.className = 'captured-piece';
-        
-        const img = document.createElement('img');
-        img.src = `/lovable-uploads/${getPieceImage(piece.type, piece.color)}`;
-        img.alt = `${piece.color} ${piece.type}`;
-        
-        pieceElement.appendChild(img);
-        blackCapturedContainer.appendChild(pieceElement);
     });
     
-    gameState.capturedPieces[PieceColor.WHITE].forEach(piece => {
-        const pieceElement = document.createElement('div');
-        pieceElement.className = 'captured-piece';
-        
-        const img = document.createElement('img');
-        img.src = `/lovable-uploads/${getPieceImage(piece.type, piece.color)}`;
-        img.alt = `${piece.color} ${piece.type}`;
-        
-        pieceElement.appendChild(img);
-        whiteCapturedContainer.appendChild(pieceElement);
+    // Change game mode
+    gameModeSelect.addEventListener('change', function() {
+        gameState.gameMode = this.value;
     });
-}
-
-// Show promotion dialog
-function showPromotionDialog() {
-    // Set the correct images based on the current turn
-    document.getElementById('promotion-queen').src = `/lovable-uploads/${getPieceImage(PieceType.QUEEN, gameState.currentTurn)}`;
-    document.getElementById('promotion-rook').src = `/lovable-uploads/${getPieceImage(PieceType.ROOK, gameState.currentTurn)}`;
-    document.getElementById('promotion-bishop').src = `/lovable-uploads/${getPieceImage(PieceType.BISHOP, gameState.currentTurn)}`;
-    document.getElementById('promotion-knight').src = `/lovable-uploads/${getPieceImage(PieceType.KNIGHT, gameState.currentTurn)}`;
     
-    // Show the dialog
-    promotionDialog.classList.add('active');
-    
-    // Create overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'overlay active';
-    document.body.appendChild(overlay);
-    
-    // Add click handlers to promotion pieces
-    const promotionPieces = document.querySelectorAll('.promotion-piece');
-    promotionPieces.forEach(piece => {
-        piece.addEventListener('click', async () => {
-            const pieceType = piece.dataset.pieceType;
-            
-            try {
-                const response = await fetch('/api/promote-pawn', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ pieceType })
-                });
-                
-                const result = await response.json();
-                if (result.success) {
-                    gameState = result.gameState;
-                    renderBoard();
-                    renderCapturedPieces();
-                    
-                    // Hide dialog and overlay
-                    promotionDialog.classList.remove('active');
-                    document.querySelector('.overlay').remove();
-                }
-            } catch (error) {
-                console.error('Error promoting pawn:', error);
-            }
-        });
+    // Change board style
+    boardStyleSelect.addEventListener('change', function() {
+        initializeBoard();
     });
-}
-
-// Reset game
-resetButton.addEventListener('click', async () => {
-    try {
-        const response = await fetch('/api/reset-game', {
-            method: 'POST'
-        });
-        
-        gameState = await response.json();
-        renderBoard();
-        renderCapturedPieces();
-    } catch (error) {
-        console.error('Error resetting game:', error);
-    }
+    
+    // Initialize the board
+    initializeBoard();
 });
-
-// Game mode change
-gameModeSelect.addEventListener('change', async () => {
-    const gameMode = gameModeSelect.value;
-    // In a real implementation, this would update the game mode on the server
-    console.log(`Game mode changed to: ${gameMode}`);
-});
-
-// Constants
-const PieceType = {
-    PAWN: "pawn",
-    ROOK: "rook",
-    KNIGHT: "knight",
-    BISHOP: "bishop",
-    QUEEN: "queen",
-    KING: "king"
-};
-
-const PieceColor = {
-    WHITE: "white",
-    BLACK: "black"
-};
-
-// Initialize game when page loads
-window.addEventListener('DOMContentLoaded', initGame);

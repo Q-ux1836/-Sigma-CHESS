@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, jsonify
 import json
 import os
@@ -44,15 +43,28 @@ class ChessGame:
             board[1][col] = {"type": PieceType.PAWN, "color": PieceColor.BLACK, "position": {"row": 1, "col": col}}
             board[6][col] = {"type": PieceType.PAWN, "color": PieceColor.WHITE, "position": {"row": 6, "col": col}}
         
-        # Set up other pieces
-        back_row_pieces = [
-            PieceType.ROOK, PieceType.KNIGHT, PieceType.BISHOP, PieceType.QUEEN,
-            PieceType.KING, PieceType.BISHOP, PieceType.KNIGHT, PieceType.ROOK
-        ]
+        # Set up other pieces - corrected arrangement
+        # First and last rows: Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook
         
-        for col in range(8):
-            board[0][col] = {"type": back_row_pieces[col], "color": PieceColor.BLACK, "position": {"row": 0, "col": col}}
-            board[7][col] = {"type": back_row_pieces[col], "color": PieceColor.WHITE, "position": {"row": 7, "col": col}}
+        # Black pieces (top row)
+        board[0][0] = {"type": PieceType.ROOK, "color": PieceColor.BLACK, "position": {"row": 0, "col": 0}}
+        board[0][1] = {"type": PieceType.KNIGHT, "color": PieceColor.BLACK, "position": {"row": 0, "col": 1}}
+        board[0][2] = {"type": PieceType.BISHOP, "color": PieceColor.BLACK, "position": {"row": 0, "col": 2}}
+        board[0][3] = {"type": PieceType.QUEEN, "color": PieceColor.BLACK, "position": {"row": 0, "col": 3}}
+        board[0][4] = {"type": PieceType.KING, "color": PieceColor.BLACK, "position": {"row": 0, "col": 4}}
+        board[0][5] = {"type": PieceType.BISHOP, "color": PieceColor.BLACK, "position": {"row": 0, "col": 5}}
+        board[0][6] = {"type": PieceType.KNIGHT, "color": PieceColor.BLACK, "position": {"row": 0, "col": 6}}
+        board[0][7] = {"type": PieceType.ROOK, "color": PieceColor.BLACK, "position": {"row": 0, "col": 7}}
+        
+        # White pieces (bottom row)
+        board[7][0] = {"type": PieceType.ROOK, "color": PieceColor.WHITE, "position": {"row": 7, "col": 0}}
+        board[7][1] = {"type": PieceType.KNIGHT, "color": PieceColor.WHITE, "position": {"row": 7, "col": 1}}
+        board[7][2] = {"type": PieceType.BISHOP, "color": PieceColor.WHITE, "position": {"row": 7, "col": 2}}
+        board[7][3] = {"type": PieceType.QUEEN, "color": PieceColor.WHITE, "position": {"row": 7, "col": 3}}
+        board[7][4] = {"type": PieceType.KING, "color": PieceColor.WHITE, "position": {"row": 7, "col": 4}}
+        board[7][5] = {"type": PieceType.BISHOP, "color": PieceColor.WHITE, "position": {"row": 7, "col": 5}}
+        board[7][6] = {"type": PieceType.KNIGHT, "color": PieceColor.WHITE, "position": {"row": 7, "col": 6}}
+        board[7][7] = {"type": PieceType.ROOK, "color": PieceColor.WHITE, "position": {"row": 7, "col": 7}}
             
         return board
     
