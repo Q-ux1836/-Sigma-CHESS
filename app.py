@@ -43,8 +43,8 @@ class ChessGame:
             board[1][col] = {"type": PieceType.PAWN, "color": PieceColor.BLACK, "position": {"row": 1, "col": col}}
             board[6][col] = {"type": PieceType.PAWN, "color": PieceColor.WHITE, "position": {"row": 6, "col": col}}
         
-        # Set up other pieces - corrected arrangement
-        # First and last rows: Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook
+        # Set up all pieces in correct order:
+        # Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook
         
         # Black pieces (top row)
         board[0][0] = {"type": PieceType.ROOK, "color": PieceColor.BLACK, "position": {"row": 0, "col": 0}}

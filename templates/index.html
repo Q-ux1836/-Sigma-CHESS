@@ -42,7 +42,7 @@
             </select>
         </div>
         
-        <div class="overlay"></div>
+        <div class="overlay" id="overlay"></div>
         
         <div class="promotion-dialog" id="promotion-dialog">
             <h3>Choose Promotion</h3>
@@ -63,6 +63,310 @@
         </div>
     </main>
     
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        // Image paths for the chess pieces
+        const PIECE_IMAGES = {
+            'white': {
+                'pawn': '/lovable-uploads/68deda6e-0257-437e-8a96-ebf4be651592.png',
+                'rook': '/lovable-uploads/c954dc96-c90f-4faf-a1ad-2d6c20b5bc1c.png',
+                'knight': '/lovable-uploads/7dc10eb4-08f6-41a4-a4e8-293f333e92b2.png',
+                'bishop': '/lovable-uploads/1fe7bb25-78b3-4e64-9524-3eb4dd0f66e3.png',
+                'queen': '/lovable-uploads/bc8ca135-f693-4e57-bc85-cae391227a7a.png',
+                'king': '/lovable-uploads/29bbe838-33f0-40c4-98b8-c95ef9aa1e66.png'
+            },
+            'black': {
+                'pawn': '/lovable-uploads/42db49b6-4535-4db8-a445-c3f233f38136.png',
+                'rook': '/lovable-uploads/a84e8f3a-313e-4cfd-b6da-541a3c84dd32.png',
+                'knight': '/lovable-uploads/94bcdfe7-3b05-4721-b0ad-e748321de400.png',
+                'bishop': '/lovable-uploads/c506906f-2e4f-43bf-85b9-e1485ce8088c.png',
+                'queen': '/lovable-uploads/bede6588-797b-47e5-98bd-bba03accda0a.png',
+                'king': '/lovable-uploads/2c29fb54-b770-4192-ad2e-f15afd2c7323.png'
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            let gameState = null;
+            const chessBoard = document.getElementById('chess-board');
+            const blackCapturedContainer = document.getElementById('black-captured-pieces');
+            const whiteCapturedContainer = document.getElementById('white-captured-pieces');
+            const resetButton = document.getElementById('reset-game');
+            const gameModeSelect = document.getElementById('game-mode');
+            const boardStyleSelect = document.getElementById('board-style');
+            const overlay = document.getElementById('overlay');
+            const promotionDialog = document.getElementById('promotion-dialog');
+            const promotionPieces = document.querySelectorAll('.promotion-piece');
+            
+            // Set promotion piece images
+            document.getElementById('promotion-queen').src = PIECE_IMAGES.white.queen;
+            document.getElementById('promotion-rook').src = PIECE_IMAGES.white.rook;
+            document.getElementById('promotion-bishop').src = PIECE_IMAGES.white.bishop;
+            document.getElementById('promotion-knight').src = PIECE_IMAGES.white.knight;
+            
+            // Initialize game
+            fetchGameState();
+            
+            // Set up event listeners
+            resetButton.addEventListener('click', resetGame);
+            boardStyleSelect.addEventListener('change', updateBoardStyle);
+            
+            // Handle promotion piece selection
+            promotionPieces.forEach(piece => {
+                piece.addEventListener('click', function() {
+                    const pieceType = this.getAttribute('data-piece-type');
+                    promotePawn(pieceType);
+                });
+            });
+            
+            function createChessBoard() {
+                chessBoard.innerHTML = '';
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const square = document.createElement('div');
+                        square.classList.add('chess-square');
+                        
+                        // Add light or dark class based on position
+                        if ((row + col) % 2 === 0) {
+                            square.classList.add('square-light');
+                        } else {
+                            square.classList.add('square-dark');
+                        }
+                        
+                        // Add data attributes for position
+                        square.setAttribute('data-row', row);
+                        square.setAttribute('data-col', col);
+                        
+                        // Add piece if there is one at this position
+                        const piece = gameState.board[row][col];
+                        if (piece) {
+                            const pieceElement = document.createElement('div');
+                            pieceElement.classList.add('chess-piece');
+                            
+                            const img = document.createElement('img');
+                            img.src = PIECE_IMAGES[piece.color][piece.type];
+                            img.alt = `${piece.color} ${piece.type}`;
+                            
+                            pieceElement.appendChild(img);
+                            square.appendChild(pieceElement);
+                        }
+                        
+                        // Highlight selected piece
+                        if (gameState.selectedPiece && 
+                            gameState.selectedPiece.row === row && 
+                            gameState.selectedPiece.col === col) {
+                            square.classList.add('square-selected');
+                        }
+                        
+                        // Highlight possible moves
+                        if (gameState.possibleMoves && gameState.possibleMoves.some(move => move.row === row && move.col === col)) {
+                            square.classList.add('square-movable');
+                        }
+                        
+                        // Add click event listener
+                        square.addEventListener('click', () => handleSquareClick(row, col));
+                        
+                        chessBoard.appendChild(square);
+                    }
+                }
+                
+                updateBoardStyle();
+            }
+            
+            function updateBoardStyle() {
+                const style = boardStyleSelect.value;
+                const squares = document.querySelectorAll('.chess-square');
+                
+                // Remove all style classes
+                squares.forEach(square => {
+                    square.classList.remove('square-light-blue', 'square-dark-blue', 
+                                          'square-light-green', 'square-dark-green');
+                });
+                
+                // Apply selected style
+                if (style === 'blue') {
+                    squares.forEach(square => {
+                        if (square.classList.contains('square-light')) {
+                            square.classList.add('square-light-blue');
+                        } else {
+                            square.classList.add('square-dark-blue');
+                        }
+                    });
+                } else if (style === 'green') {
+                    squares.forEach(square => {
+                        if (square.classList.contains('square-light')) {
+                            square.classList.add('square-light-green');
+                        } else {
+                            square.classList.add('square-dark-green');
+                        }
+                    });
+                }
+            }
+            
+            function updateCapturedPieces() {
+                blackCapturedContainer.innerHTML = '';
+                whiteCapturedContainer.innerHTML = '';
+                
+                if (gameState.capturedPieces) {
+                    // Add black pieces captured by white
+                    if (gameState.capturedPieces.black) {
+                        gameState.capturedPieces.black.forEach(piece => {
+                            const capturedPiece = document.createElement('div');
+                            capturedPiece.classList.add('captured-piece');
+                            
+                            const img = document.createElement('img');
+                            img.src = PIECE_IMAGES[piece.color][piece.type];
+                            img.alt = `${piece.color} ${piece.type}`;
+                            
+                            capturedPiece.appendChild(img);
+                            blackCapturedContainer.appendChild(capturedPiece);
+                        });
+                    }
+                    
+                    // Add white pieces captured by black
+                    if (gameState.capturedPieces.white) {
+                        gameState.capturedPieces.white.forEach(piece => {
+                            const capturedPiece = document.createElement('div');
+                            capturedPiece.classList.add('captured-piece');
+                            
+                            const img = document.createElement('img');
+                            img.src = PIECE_IMAGES[piece.color][piece.type];
+                            img.alt = `${piece.color} ${piece.type}`;
+                            
+                            capturedPiece.appendChild(img);
+                            whiteCapturedContainer.appendChild(capturedPiece);
+                        });
+                    }
+                }
+            }
+            
+            function handleSquareClick(row, col) {
+                // Don't allow clicks during promotion
+                if (gameState.promotionPending) return;
+                
+                const selectedPiece = gameState.selectedPiece;
+                
+                // If no piece is selected, try to select one
+                if (!selectedPiece) {
+                    selectPiece(row, col);
+                } else {
+                    // If a piece is already selected, try to move it
+                    const fromRow = selectedPiece.row;
+                    const fromCol = selectedPiece.col;
+                    
+                    const isPossibleMove = gameState.possibleMoves.some(
+                        move => move.row === row && move.col === col
+                    );
+                    
+                    if (isPossibleMove) {
+                        movePiece(fromRow, fromCol, row, col);
+                    } else {
+                        // If clicking on a different piece of the same color, select it
+                        selectPiece(row, col);
+                    }
+                }
+            }
+            
+            function selectPiece(row, col) {
+                fetch('/api/select-piece', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ row, col }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    gameState = data;
+                    createChessBoard();
+                })
+                .catch(error => console.error('Error selecting piece:', error));
+            }
+            
+            function movePiece(fromRow, fromCol, toRow, toCol) {
+                fetch('/api/move-piece', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ fromRow, fromCol, toRow, toCol }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        gameState = data.gameState;
+                        createChessBoard();
+                        updateCapturedPieces();
+                        
+                        // Check if pawn promotion is pending
+                        if (gameState.promotionPending) {
+                            showPromotionDialog();
+                        }
+                    }
+                })
+                .catch(error => console.error('Error moving piece:', error));
+            }
+            
+            function promotePawn(pieceType) {
+                fetch('/api/promote-pawn', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ pieceType }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        gameState = data.gameState;
+                        createChessBoard();
+                        updateCapturedPieces();
+                        hidePromotionDialog();
+                    }
+                })
+                .catch(error => console.error('Error promoting pawn:', error));
+            }
+            
+            function resetGame() {
+                fetch('/api/reset-game', {
+                    method: 'POST',
+                })
+                .then(response => response.json())
+                .then(data => {
+                    gameState = data;
+                    createChessBoard();
+                    updateCapturedPieces();
+                })
+                .catch(error => console.error('Error resetting game:', error));
+            }
+            
+            function fetchGameState() {
+                fetch('/api/game-state')
+                .then(response => response.json())
+                .then(data => {
+                    gameState = data;
+                    createChessBoard();
+                    updateCapturedPieces();
+                })
+                .catch(error => console.error('Error fetching game state:', error));
+            }
+            
+            function showPromotionDialog() {
+                // Update promotion images to match the current turn color
+                const color = gameState.currentTurn;
+                document.getElementById('promotion-queen').src = PIECE_IMAGES[color].queen;
+                document.getElementById('promotion-rook').src = PIECE_IMAGES[color].rook;
+                document.getElementById('promotion-bishop').src = PIECE_IMAGES[color].bishop;
+                document.getElementById('promotion-knight').src = PIECE_IMAGES[color].knight;
+                
+                overlay.classList.add('active');
+                promotionDialog.classList.add('active');
+            }
+            
+            function hidePromotionDialog() {
+                overlay.classList.remove('active');
+                promotionDialog.classList.remove('active');
+            }
+        });
+    </script>
 </body>
 </html>
