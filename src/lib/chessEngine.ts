@@ -1,4 +1,3 @@
-
 // Chess Piece Types
 export enum PieceType {
   PAWN = 'pawn',
@@ -119,8 +118,48 @@ export function isValidPosition(position: Position): boolean {
   return position.row >= 0 && position.row < 8 && position.col >= 0 && position.col < 8;
 }
 
-// Get possible moves for a piece
-export function getPossibleMoves(piece: ChessPiece, board: (ChessPiece | null)[][]): Position[] {
+// Find the king position for a color
+export function findKingPosition(board: (ChessPiece | null)[][], color: PieceColor): Position | null {
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const piece = board[row][col];
+      if (piece && piece.type === PieceType.KING && piece.color === color) {
+        return { row, col };
+      }
+    }
+  }
+  return null;
+}
+
+// Check if a position is under attack by the opposing color
+export function isPositionUnderAttack(position: Position, board: (ChessPiece | null)[][], attackingColor: PieceColor): boolean {
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const piece = board[row][col];
+      if (piece && piece.color === attackingColor) {
+        // Get raw moves without considering check
+        const rawMoves = getRawPieceMoves(piece, board);
+        // Check if any move can reach the target position
+        if (rawMoves.some(move => move.row === position.row && move.col === position.col)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+// Check if the king is in check
+export function isKingInCheck(board: (ChessPiece | null)[][], kingColor: PieceColor): boolean {
+  const kingPosition = findKingPosition(board, kingColor);
+  if (!kingPosition) return false;
+  
+  const opponentColor = kingColor === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+  return isPositionUnderAttack(kingPosition, board, opponentColor);
+}
+
+// Get raw piece moves without check validation
+export function getRawPieceMoves(piece: ChessPiece, board: (ChessPiece | null)[][]): Position[] {
   const { type, color, position } = piece;
   const moves: Position[] = [];
 
@@ -289,6 +328,32 @@ export function getPossibleMoves(piece: ChessPiece, board: (ChessPiece | null)[]
   return moves;
 }
 
+// Get possible moves for a piece, filtering out moves that would leave the king in check
+export function getPossibleMoves(piece: ChessPiece, board: (ChessPiece | null)[][]): Position[] {
+  const rawMoves = getRawPieceMoves(piece, board);
+  const validMoves: Position[] = [];
+  
+  // For each potential move, check if making it would put/leave the king in check
+  for (const move of rawMoves) {
+    // Create a temporary board to simulate the move
+    const tempBoard = board.map(row => [...row]);
+    
+    // Simulate the move
+    const pieceClone = { ...piece, position: { ...move } };
+    tempBoard[move.row][move.col] = pieceClone;
+    tempBoard[piece.position.row][piece.position.col] = null;
+    
+    // Check if the king is in check after the move
+    const kingInCheck = isKingInCheck(tempBoard, piece.color);
+    
+    if (!kingInCheck) {
+      validMoves.push(move);
+    }
+  }
+  
+  return validMoves;
+}
+
 // Check if a pawn can be promoted
 export function isPawnPromotion(from: Position, to: Position, board: (ChessPiece | null)[][]): boolean {
   const piece = board[from.row][from.col];
@@ -342,6 +407,30 @@ export function promotePawn(gameState: GameState, promotionType: PieceType): Gam
   };
 }
 
+// Check if a player is in checkmate
+export function isCheckmate(gameState: GameState, color: PieceColor): boolean {
+  // If the king is not in check, it's not checkmate
+  if (!isKingInCheck(gameState.board, color)) {
+    return false;
+  }
+  
+  // Try to find any legal move that would get the king out of check
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const piece = gameState.board[row][col];
+      if (piece && piece.color === color) {
+        const possibleMoves = getPossibleMoves(piece, gameState.board);
+        if (possibleMoves.length > 0) {
+          return false; // There's at least one legal move
+        }
+      }
+    }
+  }
+  
+  // No legal moves found, and the king is in check: it's checkmate
+  return true;
+}
+
 // Move a piece on the board
 export function movePiece(from: Position, to: Position, gameState: GameState): GameState {
   const newBoard = gameState.board.map(row => [...row]);
@@ -385,9 +474,10 @@ export function movePiece(from: Position, to: Position, gameState: GameState): G
   // Toggle current turn
   const newTurn = gameState.currentTurn === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
   
-  // Simplified check for this demo
-  const isCheck = false; // You would implement check detection here
-  const isCheckmate = false; // You would implement checkmate detection here
+  // Check if the opponent is now in check or checkmate
+  const opponentColor = newTurn;
+  const isInCheck = isKingInCheck(newBoard, opponentColor);
+  const isInCheckmate = isInCheck && isCheckmate({ ...gameState, board: newBoard, currentTurn: newTurn }, opponentColor);
   
   return {
     ...gameState,
@@ -395,8 +485,8 @@ export function movePiece(from: Position, to: Position, gameState: GameState): G
     currentTurn: newTurn,
     selectedPiece: null,
     possibleMoves: [],
-    isCheck,
-    isCheckmate,
+    isCheck: isInCheck,
+    isCheckmate: isInCheckmate,
     capturedPieces: newCapturedPieces,
     moveHistory: newMoveHistory
   };
