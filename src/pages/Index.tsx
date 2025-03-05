@@ -54,6 +54,14 @@ const Index = () => {
               >
                 Quick Game
               </Button>
+              <Button 
+                variant="secondary" 
+                size="lg" 
+                className="px-8 transition-all duration-300"
+                onClick={() => navigate('/chess')}
+              >
+                Web Chess
+              </Button>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
