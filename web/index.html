@@ -1,0 +1,73 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game - Web Version</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Chess Game</h1>
+            <div class="controls">
+                <div class="theme-buttons">
+                    <button id="standard-theme">Standard</button>
+                    <button id="vintage-theme">Vintage</button>
+                    <button id="dark-theme">Dark</button>
+                    <button id="high-contrast-theme">High Contrast</button>
+                </div>
+                <div class="game-controls">
+                    <button id="new-game">New Game</button>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+            <div class="game-container">
+                <div class="captured-pieces black-captured">
+                    <h3>Captured by White</h3>
+                    <div id="black-captured-pieces" class="pieces-container"></div>
+                </div>
+                
+                <div class="chess-board" id="chess-board">
+                    <!-- Chess board will be dynamically generated -->
+                </div>
+                
+                <div class="captured-pieces white-captured">
+                    <h3>Captured by Black</h3>
+                    <div id="white-captured-pieces" class="pieces-container"></div>
+                </div>
+            </div>
+            
+            <div class="game-status">
+                <p id="current-turn">Current turn: White</p>
+                <p id="game-message"></p>
+            </div>
+        </main>
+        
+        <div class="overlay" id="overlay"></div>
+        
+        <div class="promotion-dialog" id="promotion-dialog">
+            <h3>Choose Promotion</h3>
+            <div class="promotion-options">
+                <div class="promotion-piece" data-piece-type="queen">
+                    <img src="" alt="Queen" id="promotion-queen">
+                </div>
+                <div class="promotion-piece" data-piece-type="rook">
+                    <img src="" alt="Rook" id="promotion-rook">
+                </div>
+                <div class="promotion-piece" data-piece-type="bishop">
+                    <img src="" alt="Bishop" id="promotion-bishop">
+                </div>
+                <div class="promotion-piece" data-piece-type="knight">
+                    <img src="" alt="Knight" id="promotion-knight">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/chess.js"></script>
+</body>
+</html>
