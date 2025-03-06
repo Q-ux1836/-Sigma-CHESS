@@ -8,6 +8,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ImageUploader from './ImageUploader';
 
 type ChessPiece = {
   type: 'P' | 'R' | 'N' | 'B' | 'Q' | 'K';
@@ -24,6 +33,10 @@ type ChessSquare = {
   position: BoardPosition;
 };
 
+type CustomImages = {
+  [key: string]: string | null;
+};
+
 const WebChess: React.FC = () => {
   const { toast } = useToast();
   const [board, setBoard] = useState<(ChessPiece | null)[][]>([]);
@@ -37,6 +50,11 @@ const WebChess: React.FC = () => {
   const [blackCapturedPieces, setBlackCapturedPieces] = useState<ChessPiece[]>([]);
   const [gameMessage, setGameMessage] = useState('');
   const [gameMode, setGameMode] = useState<'two_player' | 'vs_ai'>('two_player');
+  const [customImages, setCustomImages] = useState<CustomImages>({
+    wP: null, wR: null, wN: null, wB: null, wQ: null, wK: null,
+    bP: null, bR: null, bN: null, bB: null, bQ: null, bK: null,
+  });
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   
   useEffect(() => {
     initializeBoard();
@@ -70,6 +88,12 @@ const WebChess: React.FC = () => {
   };
   
   const getPieceImage = (piece: ChessPiece) => {
+    const pieceKey = `${piece.color}${piece.type}`;
+    
+    if (customImages[pieceKey]) {
+      return customImages[pieceKey];
+    }
+    
     const pieceImages = {
       'wP': '/lovable-uploads/fbf27461-95a7-4b74-8e6c-3611a187691f.png',
       'wR': '/lovable-uploads/a5cbe14a-8516-4fd8-8bc1-ce46f2b351c4.png',
@@ -85,7 +109,7 @@ const WebChess: React.FC = () => {
       'bK': '/lovable-uploads/9a763d59-7f80-45ab-9dcd-c9eff361b961.png'
     };
     
-    return pieceImages[`${piece.color}${piece.type}`];
+    return pieceImages[pieceKey];
   };
   
   const handleSquareClick = (row: number, col: number) => {
@@ -362,11 +386,84 @@ const WebChess: React.FC = () => {
     });
   };
   
+  const handleImageUpload = (pieceKey: string, imageUrl: string) => {
+    setCustomImages(prev => ({
+      ...prev,
+      [pieceKey]: imageUrl
+    }));
+    
+    toast({
+      title: "Image Updated",
+      description: `Custom image for ${pieceKey} has been set.`,
+      duration: 3000,
+    });
+  };
+  
+  const handleUploadAllImages = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith('image/')) continue;
+      
+      const fileName = file.name.toLowerCase();
+      let pieceKey: string | null = null;
+      
+      if (fileName.includes('white') || fileName.includes('w')) {
+        if (fileName.includes('pawn') || fileName.includes('p')) pieceKey = 'wP';
+        else if (fileName.includes('rook') || fileName.includes('r')) pieceKey = 'wR';
+        else if (fileName.includes('knight') || fileName.includes('n')) pieceKey = 'wN';
+        else if (fileName.includes('bishop') || fileName.includes('b')) pieceKey = 'wB';
+        else if (fileName.includes('queen') || fileName.includes('q')) pieceKey = 'wQ';
+        else if (fileName.includes('king') || fileName.includes('k')) pieceKey = 'wK';
+      } else if (fileName.includes('black') || fileName.includes('b')) {
+        if (fileName.includes('pawn') || fileName.includes('p')) pieceKey = 'bP';
+        else if (fileName.includes('rook') || fileName.includes('r')) pieceKey = 'bR';
+        else if (fileName.includes('knight') || fileName.includes('n')) pieceKey = 'bN';
+        else if (fileName.includes('bishop') || fileName.includes('b')) pieceKey = 'bB';
+        else if (fileName.includes('queen') || fileName.includes('q')) pieceKey = 'bQ';
+        else if (fileName.includes('king') || fileName.includes('k')) pieceKey = 'bK';
+      }
+      
+      if (pieceKey) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const imageUrl = e.target?.result as string;
+          setCustomImages(prev => ({
+            ...prev,
+            [pieceKey as string]: imageUrl
+          }));
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+    
+    toast({
+      title: "Images Processed",
+      description: "Your image files have been processed.",
+      duration: 3000,
+    });
+  };
+  
+  const resetCustomImages = () => {
+    setCustomImages({
+      wP: null, wR: null, wN: null, wB: null, wQ: null, wK: null,
+      bP: null, bR: null, bN: null, bB: null, bQ: null, bK: null,
+    });
+    
+    toast({
+      title: "Custom Images Reset",
+      description: "All pieces are now using default images.",
+      duration: 3000,
+    });
+  };
+  
   return (
     <div className="container mx-auto px-4 py-4">
       <Card className="p-4">
         <header className="mb-4 text-center">
-          <h1 className="text-2xl font-bold mb-2">PyQt5 Chess Game</h1>
+          <h1 className="text-2xl font-bold mb-2">𝝨 CHESS</h1>
           
           <div className="flex flex-col gap-2">
             <div className="status-display mb-2">
@@ -429,6 +526,87 @@ const WebChess: React.FC = () => {
             
             <div className="game-controls flex justify-center gap-2">
               <Button size="sm" onClick={resetGame} className="px-2 py-1 text-sm">New Game</Button>
+              <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="px-2 py-1 text-sm">Custom Pieces</Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-xl">
+                  <DialogHeader>
+                    <DialogTitle>Upload Custom Chess Pieces</DialogTitle>
+                  </DialogHeader>
+                  <Tabs defaultValue="individual">
+                    <TabsList className="grid grid-cols-2 mb-4">
+                      <TabsTrigger value="individual">Individual Uploads</TabsTrigger>
+                      <TabsTrigger value="batch">Batch Upload</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="individual" className="space-y-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="space-y-2">
+                          <h3 className="font-medium">White Pieces</h3>
+                          <div className="grid grid-cols-2 gap-2">
+                            {['wP', 'wR', 'wN', 'wB', 'wQ', 'wK'].map(pieceKey => (
+                              <div key={pieceKey} className="aspect-square border p-2 rounded flex flex-col items-center">
+                                <img
+                                  src={customImages[pieceKey] || getPieceImage({ type: pieceKey[1] as any, color: pieceKey[0] as any })}
+                                  alt={pieceKey}
+                                  className="w-12 h-12 object-contain mb-1"
+                                />
+                                <ImageUploader
+                                  onImageUploaded={(url) => handleImageUpload(pieceKey, url)}
+                                  label=""
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <h3 className="font-medium">Black Pieces</h3>
+                          <div className="grid grid-cols-2 gap-2">
+                            {['bP', 'bR', 'bN', 'bB', 'bQ', 'bK'].map(pieceKey => (
+                              <div key={pieceKey} className="aspect-square border p-2 rounded flex flex-col items-center">
+                                <img
+                                  src={customImages[pieceKey] || getPieceImage({ type: pieceKey[1] as any, color: pieceKey[0] as any })}
+                                  alt={pieceKey}
+                                  className="w-12 h-12 object-contain mb-1"
+                                />
+                                <ImageUploader
+                                  onImageUploaded={(url) => handleImageUpload(pieceKey, url)}
+                                  label=""
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="batch" className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Upload multiple images at once. Name your files appropriately (e.g., "white_pawn.png", "black_king.png") 
+                        to auto-assign them to the right pieces.
+                      </p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleUploadAllImages}
+                        className="w-full" 
+                      />
+                    </TabsContent>
+                  </Tabs>
+                  
+                  <div className="flex justify-between mt-4">
+                    <Button variant="outline" onClick={resetCustomImages}>
+                      Reset to Default
+                    </Button>
+                    <Button onClick={() => setUploadDialogOpen(false)}>
+                      Done
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <Button size="sm" variant="outline" onClick={() => window.history.back()} className="px-2 py-1 text-sm">Quit</Button>
             </div>
           </div>
