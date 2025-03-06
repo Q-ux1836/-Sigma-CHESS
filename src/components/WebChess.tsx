@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import type { ChessPiece as ChessPieceType } from '@/lib/chessEngine';
 import {
   initializeGame,
   movePiece,
   getPossibleMoves,
-  isPawnPromotion,
-  promotePawn,
   makeAIMove,
   PieceColor,
   PieceType,
   GameMode,
   GameState,
-  ChessPiece,
   Position
 } from '@/lib/chessEngine';
 import { useToast } from "@/components/ui/use-toast";
@@ -30,7 +28,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button";
 
 interface ChessPieceProps {
-  piece: ChessPiece;
+  piece: ChessPieceType;
   size: number;
   uploadedImages: { [key: string]: string };
 }
@@ -146,7 +144,6 @@ const WebChess = () => {
 
   useEffect(() => {
     if (gameState.gameMode === GameMode.HUMAN_VS_AI && gameState.currentTurn === PieceColor.BLACK && !gameState.isCheckmate) {
-      // Delay the AI move slightly to make it seem more natural
       setTimeout(() => {
         setGameState((prevGameState) => {
           const aiMoveState = makeAIMove(prevGameState);
@@ -161,7 +158,6 @@ const WebChess = () => {
     const piece = gameState.board[row][col];
 
     if (selectedSquare) {
-      // Attempt to move the piece
       setGameState((prevGameState) => {
         const moveResult = movePiece(selectedSquare, clickedPosition, prevGameState);
         if (moveResult !== prevGameState) {
@@ -174,7 +170,6 @@ const WebChess = () => {
       setSelectedSquare(null);
       setPossibleMoves([]);
     } else if (piece && piece.color === gameState.currentTurn) {
-      // Select the piece and highlight possible moves
       setSelectedSquare(clickedPosition);
       const moves = getPossibleMoves(piece, gameState.board);
       setPossibleMoves(moves);
@@ -183,7 +178,6 @@ const WebChess = () => {
 
   const handlePromotePawn = (pieceType: PieceType | null) => {
     if (!pieceType) {
-      // Handle case where promotion is cancelled
       setGameState((prevGameState) => ({
         ...prevGameState,
         promotionPending: undefined,
@@ -215,8 +209,7 @@ const WebChess = () => {
   const renderCheckIndicator = () => {
     if (!gameState.isCheck) return null;
     
-    // Find the king position of the current turn (the one in check)
-    const kingColor = gameState.currentTurn;
+    let kingColor = gameState.currentTurn;
     let kingPosition: Position | null = null;
     
     for (let row = 0; row < 8; row++) {
@@ -247,7 +240,6 @@ const WebChess = () => {
 
   return (
     <div className="flex flex-col items-center p-4 w-full max-w-4xl mx-auto">
-      {/* Game status display */}
       <div className="w-full mb-4 text-center">
         <h2 className="text-xl font-bold">
           {gameState.isCheckmate
@@ -258,7 +250,6 @@ const WebChess = () => {
         </h2>
       </div>
 
-      {/* Game controls */}
       <div className="w-full mb-4 flex flex-wrap justify-center gap-2">
         <Button onClick={handleRestartGame}>Restart Game</Button>
         <AlertDialog>
@@ -280,9 +271,7 @@ const WebChess = () => {
         </AlertDialog>
       </div>
 
-      {/* Board */}
       <div className="relative" style={{ width: boardSize, height: boardSize }}>
-        {/* Board squares */}
         {Array.from({ length: 8 }).map((_, row) =>
           Array.from({ length: 8 }).map((_, col) => (
             <div
@@ -305,10 +294,8 @@ const WebChess = () => {
           ))
         )}
 
-        {/* Add the check indicator */}
         {renderCheckIndicator()}
 
-        {/* Move indicators */}
         {possibleMoves.map((move, index) => (
           <div
             key={`move-${index}`}
@@ -323,7 +310,6 @@ const WebChess = () => {
           />
         ))}
 
-        {/* Chess pieces */}
         {gameState.board.map((row, rowIndex) =>
           row.map((piece, colIndex) => {
             if (!piece) return null;
@@ -345,7 +331,6 @@ const WebChess = () => {
           })
         )}
 
-        {/* Promotion dialog */}
         {gameState.promotionPending && (
           <PromotionDialog
             isOpen={!!gameState.promotionPending}
@@ -355,7 +340,6 @@ const WebChess = () => {
         )}
       </div>
 
-      {/* Captured pieces */}
       <div className="w-full mt-4 flex justify-between">
         <div>
           <h3 className="text-md font-semibold">White Captured Pieces:</h3>
@@ -375,7 +359,6 @@ const WebChess = () => {
         </div>
       </div>
 
-      {/* Image uploader */}
       <div className="w-full mt-4 flex justify-around">
         <div>
           <h3 className="text-md font-semibold">Customize White Pieces:</h3>

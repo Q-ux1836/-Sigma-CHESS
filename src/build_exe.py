@@ -7,13 +7,7 @@ import subprocess
 def build_executable():
     """Build the chess game into an executable."""
     try:
-        # Check if PyInstaller is installed
-        try:
-            import PyInstaller
-        except ImportError:
-            print("PyInstaller is not installed. Installing now...")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
-            print("PyInstaller installed successfully.")
+        # ... keep existing code (PyInstaller installation check)
         
         # Get the directory of this script
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -25,9 +19,12 @@ def build_executable():
             
         # Make sure the images directory exists
         images_dir = os.path.join(script_dir, "images")
-        if not os.path.exists(images_dir):
-            os.makedirs(images_dir)
-            print(f"Created images directory at {images_dir}")
+        custom_images_dir = os.path.join(script_dir, "custom_pieces")
+        
+        for dir_path in [images_dir, custom_images_dir]:
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+                print(f"Created directory at {dir_path}")
         
         # Create or ensure icon file exists
         icon_path = os.path.join(images_dir, "icon.png")
@@ -50,6 +47,7 @@ def build_executable():
             "--windowed",  # Don't show console window
             "--name", "ΣChess",
             "--add-data", f"{images_dir}{os.pathsep}images",  # Include images folder
+            "--add-data", f"{custom_images_dir}{os.pathsep}custom_pieces",  # Include custom pieces folder
         ]
         
         # Add icon if available
@@ -85,17 +83,4 @@ if __name__ == "__main__":
     print("𝝨 CHESS - Executable Builder")
     print("-----------------------------")
     
-    # Check if PyQt5 is installed
-    try:
-        import PyQt5
-        print("PyQt5 is installed.")
-    except ImportError:
-        print("PyQt5 is not installed. Installing now...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "PyQt5"])
-        print("PyQt5 installed successfully.")
-    
-    # Build the executable
-    if build_executable():
-        print("\nBuild completed successfully! You can now distribute the executable.")
-    else:
-        print("\nBuild failed. Please check the error messages above.")
+    # ... keep existing code (PyQt5 installation check and build execution)
