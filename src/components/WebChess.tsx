@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,8 +36,8 @@ const WebChess: React.FC = () => {
   const [whiteCapturedPieces, setWhiteCapturedPieces] = useState<ChessPiece[]>([]);
   const [blackCapturedPieces, setBlackCapturedPieces] = useState<ChessPiece[]>([]);
   const [gameMessage, setGameMessage] = useState('');
+  const [gameMode, setGameMode] = useState<'two_player' | 'vs_ai'>('two_player');
   
-  // Initialize the chess board
   useEffect(() => {
     initializeBoard();
   }, []);
@@ -48,13 +47,11 @@ const WebChess: React.FC = () => {
       .fill(null)
       .map(() => Array(8).fill(null));
     
-    // Set up pawns
     for (let i = 0; i < 8; i++) {
       newBoard[1][i] = { type: 'P', color: 'b' };
       newBoard[6][i] = { type: 'P', color: 'w' };
     }
     
-    // Set up other pieces
     const backRankPieces: ('R' | 'N' | 'B' | 'Q' | 'K' | 'B' | 'N' | 'R')[] = 
       ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'];
     
@@ -92,7 +89,6 @@ const WebChess: React.FC = () => {
   };
   
   const handleSquareClick = (row: number, col: number) => {
-    // If no piece is selected yet
     if (!selectedPosition) {
       const piece = board[row][col];
       if (piece && piece.color === currentTurn) {
@@ -105,20 +101,17 @@ const WebChess: React.FC = () => {
       const startCol = selectedPosition.col;
       const piece = board[startRow][startCol];
       
-      // Check if the clicked position is in validMoves
       const isValidMove = validMoves.some(
         move => move.row === row && move.col === col
       );
       
       if (isValidMove) {
-        // Check if it's a pawn promotion move
         if (piece?.type === 'P' && ((piece.color === 'w' && row === 0) || (piece.color === 'b' && row === 7))) {
           setPromotionPosition({ row, col });
           setShowPromotionDialog(true);
           return;
         }
         
-        // Handle capturing
         const targetPiece = board[row][col];
         if (targetPiece) {
           if (targetPiece.color === 'w') {
@@ -128,11 +121,9 @@ const WebChess: React.FC = () => {
           }
         }
         
-        // Move the piece
         movePiece(startRow, startCol, row, col);
       }
       
-      // Reset selection
       setSelectedPosition(null);
       setValidMoves([]);
     }
@@ -144,7 +135,6 @@ const WebChess: React.FC = () => {
     
     if (!piece) return;
     
-    // Handle promotion
     if (promotionType && piece.type === 'P' && ((piece.color === 'w' && endRow === 0) || (piece.color === 'b' && endRow === 7))) {
       newBoard[endRow][endCol] = { type: promotionType, color: piece.color };
     } else {
@@ -154,17 +144,14 @@ const WebChess: React.FC = () => {
     newBoard[startRow][startCol] = null;
     setBoard(newBoard);
     
-    // Switch turns
     setCurrentTurn(currentTurn === 'w' ? 'b' : 'w');
     
-    // Check for check or checkmate
     checkGameState(newBoard, currentTurn === 'w' ? 'b' : 'w');
   };
   
   const handlePromotion = (pieceType: 'Q' | 'R' | 'B' | 'N') => {
     if (!selectedPosition || !promotionPosition) return;
     
-    // Handle capturing when promoting
     const targetPiece = board[promotionPosition.row][promotionPosition.col];
     if (targetPiece) {
       if (targetPiece.color === 'w') {
@@ -198,8 +185,8 @@ const WebChess: React.FC = () => {
         getBishopMoves(row, col, piece.color, moves);
         break;
       case 'Q':
-        getRookMoves(row, col, piece.color, moves);  // Queen moves like a rook
-        getBishopMoves(row, col, piece.color, moves); // and a bishop
+        getRookMoves(row, col, piece.color, moves);
+        getBishopMoves(row, col, piece.color, moves);
         break;
       case 'K':
         getKingMoves(row, col, piece.color, moves);
@@ -212,11 +199,9 @@ const WebChess: React.FC = () => {
   const getPawnMoves = (row: number, col: number, color: 'w' | 'b', moves: BoardPosition[]) => {
     const direction = color === 'w' ? -1 : 1;
     
-    // Forward move
     if (row + direction >= 0 && row + direction < 8 && !board[row + direction][col]) {
       moves.push({ row: row + direction, col });
       
-      // Double move from starting position
       if ((color === 'w' && row === 6) || (color === 'b' && row === 1)) {
         if (!board[row + 2 * direction][col]) {
           moves.push({ row: row + 2 * direction, col });
@@ -224,7 +209,6 @@ const WebChess: React.FC = () => {
       }
     }
     
-    // Capture moves
     for (const colOffset of [-1, 1]) {
       if (col + colOffset >= 0 && col + colOffset < 8) {
         const targetRow = row + direction;
@@ -239,7 +223,7 @@ const WebChess: React.FC = () => {
   };
   
   const getRookMoves = (row: number, col: number, color: 'w' | 'b', moves: BoardPosition[]) => {
-    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]]; // Up, Down, Left, Right
+    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
     
     for (const [dr, dc] of directions) {
       let r = row + dr;
@@ -254,7 +238,7 @@ const WebChess: React.FC = () => {
           if (targetPiece.color !== color) {
             moves.push({ row: r, col: c });
           }
-          break; // Stop when we hit a piece
+          break;
         }
         
         r += dr;
@@ -283,7 +267,7 @@ const WebChess: React.FC = () => {
   };
   
   const getBishopMoves = (row: number, col: number, color: 'w' | 'b', moves: BoardPosition[]) => {
-    const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]]; // Diagonals
+    const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
     
     for (const [dr, dc] of directions) {
       let r = row + dr;
@@ -298,7 +282,7 @@ const WebChess: React.FC = () => {
           if (targetPiece.color !== color) {
             moves.push({ row: r, col: c });
           }
-          break; // Stop when we hit a piece
+          break;
         }
         
         r += dr;
@@ -328,8 +312,6 @@ const WebChess: React.FC = () => {
   };
   
   const checkGameState = (newBoard: (ChessPiece | null)[][], currentPlayerColor: 'w' | 'b') => {
-    // Simplified check/checkmate detection
-    // This is a placeholder for more complex logic in a full chess implementation
     setGameMessage(`Current turn: ${currentPlayerColor === 'w' ? 'White' : 'Black'}`);
   };
   
@@ -349,7 +331,6 @@ const WebChess: React.FC = () => {
     
     let squareClass = "chess-square ";
     
-    // Base colors based on theme
     if (theme === 'standard') {
       squareClass += isLight ? 'bg-[#f0d9b5] ' : 'bg-[#b58863] ';
     } else if (theme === 'vintage') {
@@ -360,12 +341,10 @@ const WebChess: React.FC = () => {
       squareClass += isLight ? 'bg-white ' : 'bg-black ';
     }
     
-    // Highlight selected square
     if (isSelected) {
       squareClass += 'ring-4 ring-blue-500 ';
     }
     
-    // Highlight valid moves
     if (isValidMove) {
       squareClass += 'relative after:content-[""] after:absolute after:w-4 after:h-4 after:rounded-full after:bg-green-500/50 after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 ';
     }
@@ -373,51 +352,95 @@ const WebChess: React.FC = () => {
     return squareClass;
   };
   
+  const handleSetGameMode = (mode: 'two_player' | 'vs_ai') => {
+    setGameMode(mode);
+    resetGame();
+    toast({
+      title: mode === 'two_player' ? "Two Player Mode" : "Playing against AI",
+      description: `Game mode set to ${mode === 'two_player' ? 'Two Player' : 'versus AI'}.`,
+      duration: 3000,
+    });
+  };
+  
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Card className="p-6">
-        <header className="mb-6 text-center">
-          <h1 className="text-3xl font-bold mb-4">Chess Game</h1>
-          <div className="controls flex flex-col gap-4">
-            <div className="theme-buttons flex flex-wrap justify-center gap-2">
+    <div className="container mx-auto px-4 py-4">
+      <Card className="p-4">
+        <header className="mb-4 text-center">
+          <h1 className="text-2xl font-bold mb-2">PyQt5 Chess Game</h1>
+          
+          <div className="flex flex-col gap-2">
+            <div className="status-display mb-2">
+              <p className="text-lg font-semibold">{gameMessage || `${currentTurn === 'w' ? 'White' : 'Black'}'s turn`}</p>
+            </div>
+            
+            <div className="theme-buttons flex flex-wrap justify-center gap-2 mb-2">
               <Button 
+                size="sm"
                 variant={theme === 'standard' ? 'default' : 'outline'} 
                 onClick={() => setTheme('standard')}
+                className="px-2 py-1 text-sm"
               >
                 Standard
               </Button>
               <Button 
+                size="sm"
                 variant={theme === 'vintage' ? 'default' : 'outline'} 
                 onClick={() => setTheme('vintage')}
+                className="px-2 py-1 text-sm"
               >
                 Vintage
               </Button>
               <Button 
+                size="sm"
                 variant={theme === 'dark' ? 'default' : 'outline'} 
                 onClick={() => setTheme('dark')}
+                className="px-2 py-1 text-sm"
               >
                 Dark
               </Button>
               <Button 
+                size="sm"
                 variant={theme === 'high-contrast' ? 'default' : 'outline'} 
                 onClick={() => setTheme('high-contrast')}
+                className="px-2 py-1 text-sm"
               >
                 High Contrast
               </Button>
             </div>
-            <div className="game-controls flex justify-center">
-              <Button onClick={resetGame}>New Game</Button>
+            
+            <div className="game-mode-buttons flex justify-center gap-2 mb-2">
+              <Button 
+                size="sm"
+                variant={gameMode === 'two_player' ? 'default' : 'outline'} 
+                onClick={() => handleSetGameMode('two_player')}
+                className="px-2 py-1 text-sm"
+              >
+                Two Player
+              </Button>
+              <Button 
+                size="sm"
+                variant={gameMode === 'vs_ai' ? 'default' : 'outline'} 
+                onClick={() => handleSetGameMode('vs_ai')}
+                className="px-2 py-1 text-sm"
+              >
+                vs AI
+              </Button>
+            </div>
+            
+            <div className="game-controls flex justify-center gap-2">
+              <Button size="sm" onClick={resetGame} className="px-2 py-1 text-sm">New Game</Button>
+              <Button size="sm" variant="outline" onClick={() => window.history.back()} className="px-2 py-1 text-sm">Quit</Button>
             </div>
           </div>
         </header>
         
-        <main>
-          <div className="game-container flex flex-col md:flex-row justify-center items-center md:items-start gap-6">
-            <div className="captured-pieces p-4 bg-muted rounded-lg w-full md:w-auto">
-              <h3 className="text-lg font-semibold mb-2">Captured by White</h3>
+        <main className="flex flex-col items-center">
+          <div className="game-container flex flex-col md:flex-row justify-center items-center md:items-start gap-4">
+            <div className="captured-pieces p-2 bg-muted rounded-md w-full md:w-32">
+              <h3 className="text-sm font-semibold mb-1">Captured by White</h3>
               <div className="pieces-container flex flex-wrap gap-1">
                 {blackCapturedPieces.map((piece, index) => (
-                  <div key={index} className="captured-piece w-8 h-8">
+                  <div key={index} className="captured-piece w-6 h-6">
                     <img 
                       src={getPieceImage(piece)} 
                       alt={`${piece.color}${piece.type}`} 
@@ -428,42 +451,51 @@ const WebChess: React.FC = () => {
               </div>
             </div>
             
-            <div className="chess-board-container">
-              <div className="chess-board grid grid-cols-8 border-2 border-border">
+            <div className={`chess-board-container border-2 border-gray-400 ${
+              theme === 'standard' ? 'standard-theme' :
+              theme === 'vintage' ? 'vintage-theme' :
+              theme === 'dark' ? 'dark-theme' :
+              'high-contrast-theme'
+            }`}>
+              <div className="chess-board grid grid-cols-8">
                 {Array(8).fill(null).map((_, row) => (
                   Array(8).fill(null).map((_, col) => {
                     const piece = board[row][col];
+                    const isLight = (row + col) % 2 === 0;
                     return (
                       <div 
                         key={`${row}-${col}`}
-                        className={getSquareClass(row, col)}
+                        className={`
+                          w-10 h-10 md:w-12 md:h-12 flex items-center justify-center cursor-pointer
+                          ${isLight ? 'square-light' : 'square-dark'}
+                          ${selectedPosition?.row === row && selectedPosition?.col === col ? 'square-selected' : ''}
+                          ${validMoves.some(move => move.row === row && move.col === col) ? 'square-movable' : ''}
+                        `}
                         onClick={() => handleSquareClick(row, col)}
                       >
-                        <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center">
-                          {piece && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <img 
-                                    src={getPieceImage(piece)} 
-                                    alt={`${piece.color}${piece.type}`} 
-                                    className="w-4/5 h-4/5 object-contain cursor-pointer"
-                                  />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {piece.color === 'w' ? 'White' : 'Black'} {
-                                    piece.type === 'P' ? 'Pawn' :
-                                    piece.type === 'R' ? 'Rook' :
-                                    piece.type === 'N' ? 'Knight' :
-                                    piece.type === 'B' ? 'Bishop' :
-                                    piece.type === 'Q' ? 'Queen' :
-                                    'King'
-                                  }
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
+                        {piece && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <img 
+                                  src={getPieceImage(piece)} 
+                                  alt={`${piece.color}${piece.type}`} 
+                                  className="w-4/5 h-4/5 object-contain"
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {piece.color === 'w' ? 'White' : 'Black'} {
+                                  piece.type === 'P' ? 'Pawn' :
+                                  piece.type === 'R' ? 'Rook' :
+                                  piece.type === 'N' ? 'Knight' :
+                                  piece.type === 'B' ? 'Bishop' :
+                                  piece.type === 'Q' ? 'Queen' :
+                                  'King'
+                                }
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                     );
                   })
@@ -471,11 +503,11 @@ const WebChess: React.FC = () => {
               </div>
             </div>
             
-            <div className="captured-pieces p-4 bg-muted rounded-lg w-full md:w-auto">
-              <h3 className="text-lg font-semibold mb-2">Captured by Black</h3>
+            <div className="captured-pieces p-2 bg-muted rounded-md w-full md:w-32">
+              <h3 className="text-sm font-semibold mb-1">Captured by Black</h3>
               <div className="pieces-container flex flex-wrap gap-1">
                 {whiteCapturedPieces.map((piece, index) => (
-                  <div key={index} className="captured-piece w-8 h-8">
+                  <div key={index} className="captured-piece w-6 h-6">
                     <img 
                       src={getPieceImage(piece)} 
                       alt={`${piece.color}${piece.type}`} 
@@ -486,27 +518,23 @@ const WebChess: React.FC = () => {
               </div>
             </div>
           </div>
-          
-          <div className="game-status text-center mt-6">
-            <p className="text-xl font-semibold">{gameMessage || `Current turn: ${currentTurn === 'w' ? 'White' : 'Black'}`}</p>
-          </div>
         </main>
         
         {showPromotionDialog && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-            <Card className="p-6">
-              <h3 className="text-xl font-semibold mb-4 text-center">Choose Promotion</h3>
-              <div className="promotion-options flex justify-center gap-4">
+            <Card className="p-4">
+              <h3 className="text-lg font-semibold mb-2 text-center">Choose Promotion</h3>
+              <div className="promotion-options flex justify-center gap-3">
                 {['Q', 'R', 'B', 'N'].map((type) => (
                   <div 
                     key={type}
-                    className="promotion-piece p-2 border-2 border-transparent hover:border-primary rounded-md cursor-pointer"
+                    className="promotion-piece p-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-md cursor-pointer"
                     onClick={() => handlePromotion(type as 'Q' | 'R' | 'B' | 'N')}
                   >
                     <img 
                       src={getPieceImage({ type: type as 'Q' | 'R' | 'B' | 'N', color: currentTurn })} 
                       alt={type} 
-                      className="w-12 h-12 object-contain"
+                      className="w-10 h-10 object-contain"
                     />
                   </div>
                 ))}
@@ -515,6 +543,54 @@ const WebChess: React.FC = () => {
           </div>
         )}
       </Card>
+      
+      <style jsx>{`
+        .square-light {
+          background-color: ${theme === 'standard' ? '#ffffff' : 
+                             theme === 'vintage' ? '#ffce9e' : 
+                             theme === 'dark' ? '#969696' : 
+                             '#ffffff'};
+        }
+        
+        .square-dark {
+          background-color: ${theme === 'standard' ? '#a9a9a9' : 
+                             theme === 'vintage' ? '#d18b47' : 
+                             theme === 'dark' ? '#525252' : 
+                             '#000000'};
+        }
+        
+        .square-selected {
+          position: relative;
+        }
+        
+        .square-selected::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(70, 130, 180, 0.5);
+          z-index: 5;
+        }
+        
+        .square-movable::before {
+          content: "";
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 30%;
+          height: 30%;
+          transform: translate(-50%, -50%);
+          background-color: rgba(0, 255, 0, 0.3);
+          border-radius: 50%;
+          z-index: 5;
+        }
+        
+        .chess-board {
+          box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+      `}</style>
     </div>
   );
 };
