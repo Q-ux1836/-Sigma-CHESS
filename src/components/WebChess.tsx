@@ -544,7 +544,8 @@ const WebChess: React.FC = () => {
         )}
       </Card>
       
-      <style jsx>{`
+      <style>
+        {`
         .square-light {
           background-color: ${theme === 'standard' ? '#ffffff' : 
                              theme === 'vintage' ? '#ffce9e' : 
@@ -590,7 +591,8 @@ const WebChess: React.FC = () => {
         .chess-board {
           box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };
