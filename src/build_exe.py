@@ -23,6 +23,24 @@ def build_executable():
             print(f"Error: Chess game script not found at {chess_script}")
             return False
             
+        # Make sure the images directory exists
+        images_dir = os.path.join(script_dir, "images")
+        if not os.path.exists(images_dir):
+            os.makedirs(images_dir)
+            print(f"Created images directory at {images_dir}")
+        
+        # Create or ensure icon file exists
+        icon_path = os.path.join(images_dir, "icon.png")
+        if not os.path.exists(icon_path):
+            try:
+                # Try to use the white king as an icon if available
+                king_icon = os.path.join(images_dir, "wK.png")
+                if os.path.exists(king_icon):
+                    shutil.copy2(king_icon, icon_path)
+                    print(f"Using white king as icon: {icon_path}")
+            except Exception as e:
+                print(f"Warning: Could not create icon file: {e}")
+        
         # Create build command
         build_command = [
             sys.executable, 
@@ -30,10 +48,16 @@ def build_executable():
             "PyInstaller",
             "--onefile",  # Create a single executable
             "--windowed",  # Don't show console window
-            "--name", "ChessGame",
-            "--add-data", f"{os.path.join(script_dir, 'images')}{os.pathsep}images",  # Include images folder
-            chess_script
+            "--name", "ΣChess",
+            "--add-data", f"{images_dir}{os.pathsep}images",  # Include images folder
         ]
+        
+        # Add icon if available
+        if os.path.exists(icon_path):
+            build_command.extend(["--icon", icon_path])
+        
+        # Add the main script
+        build_command.append(chess_script)
         
         # Execute build command
         print("Building executable with PyInstaller...")
@@ -43,7 +67,7 @@ def build_executable():
         
         # Get the path to the executable
         dist_dir = os.path.join(script_dir, "dist")
-        exe_name = "ChessGame.exe" if sys.platform == "win32" else "ChessGame"
+        exe_name = "ΣChess.exe" if sys.platform == "win32" else "ΣChess"
         exe_path = os.path.join(dist_dir, exe_name)
         
         if os.path.exists(exe_path):
@@ -58,7 +82,7 @@ def build_executable():
         return False
 
 if __name__ == "__main__":
-    print("Chess Game Executable Builder")
+    print("𝝨 CHESS - Executable Builder")
     print("-----------------------------")
     
     # Check if PyQt5 is installed
