@@ -4,12 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python Chess Game</title>
+    <title>𝝨 CHESS - Python Chess Game</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <header>
-        <h1>Python Chess</h1>
+        <h1>𝝨 CHESS</h1>
     </header>
     
     <main>
@@ -42,6 +42,63 @@
             </select>
         </div>
         
+        <div class="piece-customization">
+            <h3>Custom Pieces</h3>
+            <div class="upload-container">
+                <div class="piece-upload">
+                    <label>White King:</label>
+                    <input type="file" id="upload-wK" accept="image/png, image/jpeg" data-piece="wK" class="piece-uploader">
+                </div>
+                <div class="piece-upload">
+                    <label>White Queen:</label>
+                    <input type="file" id="upload-wQ" accept="image/png, image/jpeg" data-piece="wQ" class="piece-uploader">
+                </div>
+                <div class="piece-upload">
+                    <label>White Rook:</label>
+                    <input type="file" id="upload-wR" accept="image/png, image/jpeg" data-piece="wR" class="piece-uploader">
+                </div>
+                <div class="piece-upload">
+                    <label>White Bishop:</label>
+                    <input type="file" id="upload-wB" accept="image/png, image/jpeg" data-piece="wB" class="piece-uploader">
+                </div>
+                <div class="piece-upload">
+                    <label>White Knight:</label>
+                    <input type="file" id="upload-wN" accept="image/png, image/jpeg" data-piece="wN" class="piece-uploader">
+                </div>
+                <div class="piece-upload">
+                    <label>White Pawn:</label>
+                    <input type="file" id="upload-wP" accept="image/png, image/jpeg" data-piece="wP" class="piece-uploader">
+                </div>
+            </div>
+            <div class="upload-container">
+                <div class="piece-upload">
+                    <label>Black King:</label>
+                    <input type="file" id="upload-bK" accept="image/png, image/jpeg" data-piece="bK" class="piece-uploader">
+                </div>
+                <div class="piece-upload">
+                    <label>Black Queen:</label>
+                    <input type="file" id="upload-bQ" accept="image/png, image/jpeg" data-piece="bQ" class="piece-uploader">
+                </div>
+                <div class="piece-upload">
+                    <label>Black Rook:</label>
+                    <input type="file" id="upload-bR" accept="image/png, image/jpeg" data-piece="bR" class="piece-uploader">
+                </div>
+                <div class="piece-upload">
+                    <label>Black Bishop:</label>
+                    <input type="file" id="upload-bB" accept="image/png, image/jpeg" data-piece="bB" class="piece-uploader">
+                </div>
+                <div class="piece-upload">
+                    <label>Black Knight:</label>
+                    <input type="file" id="upload-bN" accept="image/png, image/jpeg" data-piece="bN" class="piece-uploader">
+                </div>
+                <div class="piece-upload">
+                    <label>Black Pawn:</label>
+                    <input type="file" id="upload-bP" accept="image/png, image/jpeg" data-piece="bP" class="piece-uploader">
+                </div>
+            </div>
+            <button id="reset-pieces">Reset to Default Pieces</button>
+        </div>
+        
         <div class="overlay" id="overlay"></div>
         
         <div class="promotion-dialog" id="promotion-dialog">
@@ -65,7 +122,7 @@
     
     <script>
         // Image paths for the chess pieces
-        const PIECE_IMAGES = {
+        const DEFAULT_PIECE_IMAGES = {
             'white': {
                 'pawn': '/lovable-uploads/68deda6e-0257-437e-8a96-ebf4be651592.png',
                 'rook': '/lovable-uploads/c954dc96-c90f-4faf-a1ad-2d6c20b5bc1c.png',
@@ -84,6 +141,12 @@
             }
         };
 
+        // Custom piece images (will be populated by uploaded images)
+        let CUSTOM_PIECE_IMAGES = {};
+        
+        // Actual piece images to use (starts with defaults)
+        let PIECE_IMAGES = JSON.parse(JSON.stringify(DEFAULT_PIECE_IMAGES));
+
         document.addEventListener('DOMContentLoaded', function() {
             let gameState = null;
             const chessBoard = document.getElementById('chess-board');
@@ -95,6 +158,8 @@
             const overlay = document.getElementById('overlay');
             const promotionDialog = document.getElementById('promotion-dialog');
             const promotionPieces = document.querySelectorAll('.promotion-piece');
+            const resetPiecesButton = document.getElementById('reset-pieces');
+            const pieceUploaders = document.querySelectorAll('.piece-uploader');
             
             // Set promotion piece images
             document.getElementById('promotion-queen').src = PIECE_IMAGES.white.queen;
@@ -102,12 +167,21 @@
             document.getElementById('promotion-bishop').src = PIECE_IMAGES.white.bishop;
             document.getElementById('promotion-knight').src = PIECE_IMAGES.white.knight;
             
+            // Load custom pieces from localStorage if available
+            loadCustomPieces();
+            
             // Initialize game
             fetchGameState();
             
             // Set up event listeners
             resetButton.addEventListener('click', resetGame);
             boardStyleSelect.addEventListener('change', updateBoardStyle);
+            resetPiecesButton.addEventListener('click', resetToDefaultPieces);
+            
+            // Set up piece uploaders
+            pieceUploaders.forEach(uploader => {
+                uploader.addEventListener('change', handlePieceUpload);
+            });
             
             // Handle promotion piece selection
             promotionPieces.forEach(piece => {
@@ -116,6 +190,86 @@
                     promotePawn(pieceType);
                 });
             });
+            
+            function loadCustomPieces() {
+                try {
+                    const savedCustomPieces = localStorage.getItem('customPieceImages');
+                    if (savedCustomPieces) {
+                        CUSTOM_PIECE_IMAGES = JSON.parse(savedCustomPieces);
+                        
+                        // Apply custom pieces to the current set
+                        for (const color in CUSTOM_PIECE_IMAGES) {
+                            for (const pieceType in CUSTOM_PIECE_IMAGES[color]) {
+                                PIECE_IMAGES[color][pieceType] = CUSTOM_PIECE_IMAGES[color][pieceType];
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error loading custom pieces:', e);
+                }
+            }
+            
+            function handlePieceUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const pieceCode = event.target.dataset.piece;
+                const color = pieceCode[0] === 'w' ? 'white' : 'black';
+                let pieceType;
+                
+                switch(pieceCode[1]) {
+                    case 'P': pieceType = 'pawn'; break;
+                    case 'R': pieceType = 'rook'; break;
+                    case 'N': pieceType = 'knight'; break;
+                    case 'B': pieceType = 'bishop'; break;
+                    case 'Q': pieceType = 'queen'; break;
+                    case 'K': pieceType = 'king'; break;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Store the image as base64
+                    if (!CUSTOM_PIECE_IMAGES[color]) CUSTOM_PIECE_IMAGES[color] = {};
+                    CUSTOM_PIECE_IMAGES[color][pieceType] = e.target.result;
+                    PIECE_IMAGES[color][pieceType] = e.target.result;
+                    
+                    // Save to localStorage
+                    localStorage.setItem('customPieceImages', JSON.stringify(CUSTOM_PIECE_IMAGES));
+                    
+                    // Update the display
+                    createChessBoard();
+                    updateCapturedPieces();
+                    
+                    // If promoting, update promotion dialog
+                    if (gameState && gameState.promotionPending) {
+                        showPromotionDialog();
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            function resetToDefaultPieces() {
+                // Reset to default pieces
+                CUSTOM_PIECE_IMAGES = {};
+                PIECE_IMAGES = JSON.parse(JSON.stringify(DEFAULT_PIECE_IMAGES));
+                
+                // Clear from localStorage
+                localStorage.removeItem('customPieceImages');
+                
+                // Reset file inputs
+                pieceUploaders.forEach(uploader => {
+                    uploader.value = '';
+                });
+                
+                // Update the display
+                createChessBoard();
+                updateCapturedPieces();
+                
+                // If promoting, update promotion dialog
+                if (gameState && gameState.promotionPending) {
+                    showPromotionDialog();
+                }
+            }
             
             function createChessBoard() {
                 chessBoard.innerHTML = '';
@@ -143,7 +297,20 @@
                             pieceElement.classList.add('chess-piece');
                             
                             const img = document.createElement('img');
-                            img.src = PIECE_IMAGES[piece.color][piece.type];
+                            
+                            // Map piece to the correct image
+                            const color = piece.color === 'white' ? 'white' : 'black';
+                            let pieceType;
+                            switch(piece.type) {
+                                case 'pawn': pieceType = 'pawn'; break;
+                                case 'rook': pieceType = 'rook'; break;
+                                case 'knight': pieceType = 'knight'; break;
+                                case 'bishop': pieceType = 'bishop'; break;
+                                case 'queen': pieceType = 'queen'; break;
+                                case 'king': pieceType = 'king'; break;
+                            }
+                            
+                            img.src = PIECE_IMAGES[color][pieceType];
                             img.alt = `${piece.color} ${piece.type}`;
                             
                             pieceElement.appendChild(img);
@@ -351,12 +518,14 @@
             }
             
             function showPromotionDialog() {
-                // Update promotion images to match the current turn color
+                // Update promotion images to match the current turn color and custom pieces
                 const color = gameState.currentTurn;
-                document.getElementById('promotion-queen').src = PIECE_IMAGES[color].queen;
-                document.getElementById('promotion-rook').src = PIECE_IMAGES[color].rook;
-                document.getElementById('promotion-bishop').src = PIECE_IMAGES[color].bishop;
-                document.getElementById('promotion-knight').src = PIECE_IMAGES[color].knight;
+                const colorKey = color === 'white' ? 'white' : 'black';
+                
+                document.getElementById('promotion-queen').src = PIECE_IMAGES[colorKey].queen;
+                document.getElementById('promotion-rook').src = PIECE_IMAGES[colorKey].rook;
+                document.getElementById('promotion-bishop').src = PIECE_IMAGES[colorKey].bishop;
+                document.getElementById('promotion-knight').src = PIECE_IMAGES[colorKey].knight;
                 
                 overlay.classList.add('active');
                 promotionDialog.classList.add('active');

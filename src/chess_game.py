@@ -1,4 +1,3 @@
-
 import sys
 import os
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QGraphicsScene, QGraphicsView, 
@@ -326,7 +325,7 @@ class ChessLogic:
         return False
 
     def make_ai_move(self):
-        """Make a simple AI move for black."""
+        """Make a strategic AI move, improved to seek checkmate."""
         possible_moves = []
         
         # Collect all possible moves for black pieces
@@ -336,28 +335,75 @@ class ChessLogic:
                 if piece and piece[0] == 'b':
                     valid_moves = self.highlight_moves((r, c))
                     for move in valid_moves:
-                        # Prioritize capturing
-                        target_piece = self.get_piece(move[0], move[1])
+                        # Create a temporary board to simulate the move
+                        temp_board = [row[:] for row in self.board]
+                        temp_piece = temp_board[r][c]
+                        
+                        # Simulate the move
+                        temp_board[move[0]][move[1]] = temp_piece
+                        temp_board[r][c] = None
+                        
+                        # Prioritize move scoring
                         score = 0
+                        
+                        # Score for captures
+                        target_piece = self.get_piece(move[0], move[1])
                         if target_piece:
                             # Higher score for capturing higher value pieces
-                            if target_piece[1] == 'P': score = 1
-                            elif target_piece[1] == 'N' or target_piece[1] == 'B': score = 3
-                            elif target_piece[1] == 'R': score = 5
-                            elif target_piece[1] == 'Q': score = 9
-                            elif target_piece[1] == 'K': score = 100  # Practically checkmate
+                            if target_piece[1] == 'P': score = 10
+                            elif target_piece[1] == 'N' or target_piece[1] == 'B': score = 30
+                            elif target_piece[1] == 'R': score = 50
+                            elif target_piece[1] == 'Q': score = 90
+                            elif target_piece[1] == 'K': score = 900  # Prioritize king attacks
                         
+                        # Check if this move puts white in check
+                        self.board = temp_board  # Temporarily make the move
+                        if self.is_opponent_in_check('b'):
+                            score += 50  # Prioritize moves that create check
+                            
+                            # Further check if it would result in checkmate
+                            if self.is_checkmate('w'):
+                                score += 1000  # Strongly prioritize checkmate
+                        
+                        # Restore the original board
+                        self.board = [row[:] for row in self.board]
+                        
+                        # Evaluate positional advantage
+                        # Center control is valuable
+                        if 2 <= move[0] <= 5 and 2 <= move[1] <= 5:
+                            score += 5
+                        
+                        # Pawn advancement
+                        if piece[1] == 'P':
+                            score += move[0]  # More advanced pawns are better
+                        
+                        # Development of pieces in early game
+                        if piece[1] in ['N', 'B'] and r == 0:
+                            score += 5  # Encourage development
+                            
                         possible_moves.append((score, (r, c), move))
         
         if possible_moves:
             # Sort by score (highest first)
             possible_moves.sort(reverse=True)
             
-            # Pick the highest scoring move
-            _, start_pos, end_pos = possible_moves[0]
+            # Choose from top 3 moves with some randomness to avoid predictability
+            # But always pick the best move if it's a significant advantage
+            if len(possible_moves) > 2 and possible_moves[0][0] - possible_moves[2][0] < 20:
+                import random
+                choice = random.randint(0, min(2, len(possible_moves)-1))
+                _, start_pos, end_pos = possible_moves[choice]
+            else:
+                # Pick the highest scoring move
+                _, start_pos, end_pos = possible_moves[0]
+                
             piece = self.get_piece(start_pos[0], start_pos[1])
             
             # Make the move
+            target_piece = self.get_piece(end_pos[0], end_pos[1])
+            if target_piece:
+                self.captured_pieces[piece[0]].append(target_piece)
+                
             self.place_piece(end_pos[0], end_pos[1], piece)
             self.place_piece(start_pos[0], start_pos[1], None)
             
@@ -423,7 +469,7 @@ class ChessBoard(QMainWindow):
         self.ai_thinking = False
         
         # Set up the main window
-        self.setWindowTitle("PyQt5 Chess Game")
+        self.setWindowTitle("𝝨 CHESS")
         self.setGeometry(100, 100, 800, 700)
         
         # Try to set window icon
@@ -522,38 +568,36 @@ class ChessBoard(QMainWindow):
         self.ai_timer.timeout.connect(self.make_ai_move)
 
     def setup_piece_images(self):
-        """Set up the chess piece images."""
-        # Default image path
-        default_path = "C:/Users/user/Desktop/chess/images/"
-        
-        # Check if images directory exists in the executable directory
+        """Set up the chess piece images, including custom pieces."""
+        # Default image paths
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        local_images_dir = os.path.join(base_dir, "images")
+        default_images_dir = os.path.join(base_dir, "images")
+        custom_pieces_dir = os.path.join(base_dir, "custom_pieces")
         
-        # If local images directory exists, use it
-        if os.path.exists(local_images_dir):
-            images_path = local_images_dir
-        # Otherwise try a relative path
-        elif os.path.exists(os.path.join(os.path.dirname(base_dir), "images")):
-            images_path = os.path.join(os.path.dirname(base_dir), "images")
-        # Fall back to default path
-        else:
-            images_path = default_path
-        
+        # Initialize with standard pieces
         self.piece_images = {
-            'wK': os.path.join(images_path, 'wK.png'),
-            'wQ': os.path.join(images_path, 'wQ.png'),
-            'wR': os.path.join(images_path, 'wR.png'),
-            'wB': os.path.join(images_path, 'wB.png'),
-            'wN': os.path.join(images_path, 'wN.png'),
-            'wP': os.path.join(images_path, 'wP.png'),
-            'bK': os.path.join(images_path, 'bK.png'),
-            'bQ': os.path.join(images_path, 'bQ.png'),
-            'bR': os.path.join(images_path, 'bR.png'),
-            'bP': os.path.join(images_path, 'bP.png'),
-            'bN': os.path.join(images_path, 'bN.png'),
-            'bB': os.path.join(images_path, 'bB.png')
+            'wK': os.path.join(default_images_dir, 'wK.png'),
+            'wQ': os.path.join(default_images_dir, 'wQ.png'),
+            'wR': os.path.join(default_images_dir, 'wR.png'),
+            'wB': os.path.join(default_images_dir, 'wB.png'),
+            'wN': os.path.join(default_images_dir, 'wN.png'),
+            'wP': os.path.join(default_images_dir, 'wP.png'),
+            'bK': os.path.join(default_images_dir, 'bK.png'),
+            'bQ': os.path.join(default_images_dir, 'bQ.png'),
+            'bR': os.path.join(default_images_dir, 'bR.png'),
+            'bP': os.path.join(default_images_dir, 'bP.png'),
+            'bN': os.path.join(default_images_dir, 'bN.png'),
+            'bB': os.path.join(default_images_dir, 'bB.png')
         }
+        
+        # Override with custom pieces if they exist
+        if os.path.exists(custom_pieces_dir):
+            for file in os.listdir(custom_pieces_dir):
+                if file.endswith('.png') and len(file) >= 3:
+                    piece_code = file[:2]  # e.g., "wK" from "wK.png"
+                    if piece_code in self.piece_images:
+                        self.piece_images[piece_code] = os.path.join(custom_pieces_dir, file)
+                        print(f"Using custom piece image for {piece_code}")
 
     def set_game_mode(self, mode):
         """Set the game mode."""
@@ -856,48 +900,64 @@ class ChessBoard(QMainWindow):
 
 
 def create_images_dir_if_needed():
-    """Create the images directory if it doesn't exist and copy sample images."""
+    """Create the images and custom_pieces directories if they don't exist."""
     # Get the directory where the script/executable is located
     base_dir = os.path.dirname(os.path.abspath(__file__))
     images_dir = os.path.join(base_dir, "images")
+    custom_pieces_dir = os.path.join(base_dir, "custom_pieces")
     
     # Create the images directory if it doesn't exist
     if not os.path.exists(images_dir):
         os.makedirs(images_dir)
         print(f"Created images directory at {images_dir}")
+    
+    # Create the custom_pieces directory if it doesn't exist
+    if not os.path.exists(custom_pieces_dir):
+        os.makedirs(custom_pieces_dir)
+        print(f"Created custom pieces directory at {custom_pieces_dir}")
         
-        # Create simple placeholder images for pieces if needed
+    # Try to find source images
+    source_dirs = [
+        "C:/Users/user/Desktop/chess/images/",
+        os.path.join(os.path.dirname(base_dir), "images"),
+        os.path.join(base_dir, "assets"),
+        os.path.join(os.path.dirname(base_dir), "assets")
+    ]
+    
+    source_dir = None
+    for dir_path in source_dirs:
+        if os.path.exists(dir_path):
+            source_dir = dir_path
+            break
+            
+    if source_dir:
+        # Copy existing images
+        print(f"Copying chess piece images from {source_dir}")
         piece_colors = ['w', 'b']  # white, black
         piece_types = ['K', 'Q', 'R', 'B', 'N', 'P']  # king, queen, rook, bishop, knight, pawn
         
-        # Check if any source images exist that we can copy
-        source_dirs = [
-            "C:/Users/user/Desktop/chess/images/",
-            os.path.join(os.path.dirname(base_dir), "images")
-        ]
-        
-        source_dir = None
-        for dir_path in source_dirs:
-            if os.path.exists(dir_path):
-                source_dir = dir_path
+        for color in piece_colors:
+            for piece_type in piece_types:
+                piece_code = color + piece_type
+                source_path = os.path.join(source_dir, f"{piece_code}.png")
+                if os.path.exists(source_path):
+                    import shutil
+                    dest_path = os.path.join(images_dir, f"{piece_code}.png")
+                    shutil.copy2(source_path, dest_path)
+                    print(f"Copied {piece_code}.png")
+    else:
+        print("No source images found. Please add chess piece images to the 'images' directory.")
+    
+    # Check for custom pieces
+    custom_piece_exists = False
+    if os.path.exists(custom_pieces_dir):
+        for file in os.listdir(custom_pieces_dir):
+            if file.endswith('.png'):
+                custom_piece_exists = True
                 break
-                
-        if source_dir:
-            # Copy existing images
-            print(f"Copying chess piece images from {source_dir}")
-            for color in piece_colors:
-                for piece_type in piece_types:
-                    piece_code = color + piece_type
-                    source_path = os.path.join(source_dir, f"{piece_code}.png")
-                    if os.path.exists(source_path):
-                        import shutil
-                        dest_path = os.path.join(images_dir, f"{piece_code}.png")
-                        shutil.copy2(source_path, dest_path)
-                        print(f"Copied {piece_code}.png")
-                    else:
-                        print(f"Warning: Could not find source image for {piece_code}")
-        else:
-            print("No source images found. Please add chess piece images to the 'images' directory.")
+    
+    if not custom_piece_exists:
+        print("No custom piece images found. You can add custom piece images to the 'custom_pieces' directory.")
 
 
 if __name__ == "__main__":
