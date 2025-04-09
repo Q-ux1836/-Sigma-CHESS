@@ -6,10 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>𝝨 CHESS - Python Chess Game</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}" type="image/png">
 </head>
 <body>
     <header>
         <h1>𝝨 CHESS</h1>
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Sigma Chess Logo" id="logo-image">
     </header>
     
     <main>
@@ -33,7 +35,7 @@
             <button id="reset-game">New Game</button>
             <select id="game-mode">
                 <option value="human_vs_human">Human vs Human</option>
-                <option value="human_vs_ai">Human vs AI</option>
+                <option value="human_vs_ai" selected>Human vs AI</option>
             </select>
             <select id="board-style">
                 <option value="classic">Classic</option>
@@ -124,20 +126,20 @@
         // Image paths for the chess pieces
         const DEFAULT_PIECE_IMAGES = {
             'white': {
-                'pawn': '/lovable-uploads/68deda6e-0257-437e-8a96-ebf4be651592.png',
-                'rook': '/lovable-uploads/c954dc96-c90f-4faf-a1ad-2d6c20b5bc1c.png',
-                'knight': '/lovable-uploads/7dc10eb4-08f6-41a4-a4e8-293f333e92b2.png',
-                'bishop': '/lovable-uploads/1fe7bb25-78b3-4e64-9524-3eb4dd0f66e3.png',
-                'queen': '/lovable-uploads/bc8ca135-f693-4e57-bc85-cae391227a7a.png',
-                'king': '/lovable-uploads/29bbe838-33f0-40c4-98b8-c95ef9aa1e66.png'
+                'pawn': '/static/images/wP.png',
+                'rook': '/static/images/wR.png',
+                'knight': '/static/images/wN.png',
+                'bishop': '/static/images/wB.png',
+                'queen': '/static/images/wQ.png',
+                'king': '/static/images/wK.png'
             },
             'black': {
-                'pawn': '/lovable-uploads/42db49b6-4535-4db8-a445-c3f233f38136.png',
-                'rook': '/lovable-uploads/a84e8f3a-313e-4cfd-b6da-541a3c84dd32.png',
-                'knight': '/lovable-uploads/94bcdfe7-3b05-4721-b0ad-e748321de400.png',
-                'bishop': '/lovable-uploads/c506906f-2e4f-43bf-85b9-e1485ce8088c.png',
-                'queen': '/lovable-uploads/bede6588-797b-47e5-98bd-bba03accda0a.png',
-                'king': '/lovable-uploads/2c29fb54-b770-4192-ad2e-f15afd2c7323.png'
+                'pawn': '/static/images/bP.png',
+                'rook': '/static/images/bR.png',
+                'knight': '/static/images/bN.png',
+                'bishop': '/static/images/bB.png',
+                'queen': '/static/images/bQ.png',
+                'king': '/static/images/bK.png'
             }
         };
 
@@ -160,6 +162,15 @@
             const promotionPieces = document.querySelectorAll('.promotion-piece');
             const resetPiecesButton = document.getElementById('reset-pieces');
             const pieceUploaders = document.querySelectorAll('.piece-uploader');
+            
+            // Set logo from static path
+            const logoImg = document.getElementById('logo-image');
+            if (logoImg) {
+                logoImg.onerror = function() {
+                    this.src = '/static/images/logo.png';
+                    console.log('Using default logo');
+                };
+            }
             
             // Set promotion piece images
             document.getElementById('promotion-queen').src = PIECE_IMAGES.white.queen;
@@ -291,41 +302,36 @@
                         square.setAttribute('data-col', col);
                         
                         // Add piece if there is one at this position
-                        const piece = gameState.board[row][col];
-                        if (piece) {
-                            const pieceElement = document.createElement('div');
-                            pieceElement.classList.add('chess-piece');
-                            
-                            const img = document.createElement('img');
-                            
-                            // Map piece to the correct image
-                            const color = piece.color === 'white' ? 'white' : 'black';
-                            let pieceType;
-                            switch(piece.type) {
-                                case 'pawn': pieceType = 'pawn'; break;
-                                case 'rook': pieceType = 'rook'; break;
-                                case 'knight': pieceType = 'knight'; break;
-                                case 'bishop': pieceType = 'bishop'; break;
-                                case 'queen': pieceType = 'queen'; break;
-                                case 'king': pieceType = 'king'; break;
+                        if (gameState && gameState.board && gameState.board[row] && gameState.board[row][col]) {
+                            const piece = gameState.board[row][col];
+                            if (piece) {
+                                const pieceElement = document.createElement('div');
+                                pieceElement.classList.add('chess-piece');
+                                
+                                const img = document.createElement('img');
+                                
+                                // Map piece to the correct image
+                                const color = piece.color;
+                                const pieceType = piece.type;
+                                
+                                img.src = PIECE_IMAGES[color][pieceType];
+                                img.alt = `${piece.color} ${piece.type}`;
+                                
+                                pieceElement.appendChild(img);
+                                square.appendChild(pieceElement);
                             }
-                            
-                            img.src = PIECE_IMAGES[color][pieceType];
-                            img.alt = `${piece.color} ${piece.type}`;
-                            
-                            pieceElement.appendChild(img);
-                            square.appendChild(pieceElement);
                         }
                         
                         // Highlight selected piece
-                        if (gameState.selectedPiece && 
+                        if (gameState && gameState.selectedPiece && 
                             gameState.selectedPiece.row === row && 
                             gameState.selectedPiece.col === col) {
                             square.classList.add('square-selected');
                         }
                         
                         // Highlight possible moves
-                        if (gameState.possibleMoves && gameState.possibleMoves.some(move => move.row === row && move.col === col)) {
+                        if (gameState && gameState.possibleMoves && 
+                            gameState.possibleMoves.some(move => move.row === row && move.col === col)) {
                             square.classList.add('square-movable');
                         }
                         
@@ -373,7 +379,7 @@
                 blackCapturedContainer.innerHTML = '';
                 whiteCapturedContainer.innerHTML = '';
                 
-                if (gameState.capturedPieces) {
+                if (gameState && gameState.capturedPieces) {
                     // Add black pieces captured by white
                     if (gameState.capturedPieces.black) {
                         gameState.capturedPieces.black.forEach(piece => {
@@ -408,14 +414,11 @@
             
             function handleSquareClick(row, col) {
                 // Don't allow clicks during promotion
-                if (gameState.promotionPending) return;
+                if (gameState && gameState.promotionPending) return;
                 
-                const selectedPiece = gameState.selectedPiece;
-                
-                // If no piece is selected, try to select one
-                if (!selectedPiece) {
-                    selectPiece(row, col);
-                } else {
+                if (gameState && gameState.selectedPiece) {
+                    const selectedPiece = gameState.selectedPiece;
+                    
                     // If a piece is already selected, try to move it
                     const fromRow = selectedPiece.row;
                     const fromCol = selectedPiece.col;
@@ -430,6 +433,9 @@
                         // If clicking on a different piece of the same color, select it
                         selectPiece(row, col);
                     }
+                } else {
+                    // If no piece is selected, try to select one
+                    selectPiece(row, col);
                 }
             }
             
@@ -520,12 +526,11 @@
             function showPromotionDialog() {
                 // Update promotion images to match the current turn color and custom pieces
                 const color = gameState.currentTurn;
-                const colorKey = color === 'white' ? 'white' : 'black';
                 
-                document.getElementById('promotion-queen').src = PIECE_IMAGES[colorKey].queen;
-                document.getElementById('promotion-rook').src = PIECE_IMAGES[colorKey].rook;
-                document.getElementById('promotion-bishop').src = PIECE_IMAGES[colorKey].bishop;
-                document.getElementById('promotion-knight').src = PIECE_IMAGES[colorKey].knight;
+                document.getElementById('promotion-queen').src = PIECE_IMAGES[color].queen;
+                document.getElementById('promotion-rook').src = PIECE_IMAGES[color].rook;
+                document.getElementById('promotion-bishop').src = PIECE_IMAGES[color].bishop;
+                document.getElementById('promotion-knight').src = PIECE_IMAGES[color].knight;
                 
                 overlay.classList.add('active');
                 promotionDialog.classList.add('active');
