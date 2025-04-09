@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { ChessPiece as ChessPieceType } from '@/lib/chessEngine';
 import {
@@ -9,7 +10,8 @@ import {
   PieceType,
   GameMode,
   GameState,
-  Position
+  Position,
+  promotePawn
 } from '@/lib/chessEngine';
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -100,7 +102,7 @@ const PromotionDialog: React.FC<PromotionDialogProps> = ({ isOpen, onClose, colo
 };
 
 interface CapturedPiecesProps {
-  pieces: ChessPiece[];
+  pieces: ChessPieceType[];
   color: PieceColor;
   uploadedImages: { [key: string]: string };
 }
@@ -186,6 +188,8 @@ const WebChess = () => {
     }
 
     setGameState((prevGameState) => {
+      if (!prevGameState.promotionPending) return prevGameState;
+      
       const promoteResult = promotePawn(prevGameState, pieceType);
       setSelectedSquare(null);
       setPossibleMoves([]);
